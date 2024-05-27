@@ -1,56 +1,10 @@
 #include "Adafruit_LiquidCrystal.h"
+#include "header.h"
 
-#define ENDERECO_PCF8574_PLAYER_A 0x20 // Endereco I2C para o PCF8574
-#define ENDERECO_PCF8574_PLAYER_B 0x21 // Endereco I2C para o PCF8574
-#define ENDERECO_PCF8574_PLAYER_C 0x22 // Endereco I2C para o PCF8574
-#define ENDERECO_PCF8574_PLAYER_D 0x23 // Endereco I2C para o PCF8574
-#define ENDERECO_PCF8574_PLAYER_E 0x24 // Endereco I2C para o PCF8574
-#define ENDERECO_PCF8574_PLAYER_0 0x25 // Endereco I2C para o PCF8574
-
-uint8_t byte_player_0;
-uint8_t byte_player_A;
-uint8_t byte_player_B;
-uint8_t byte_player_C;
-uint8_t byte_player_D;
-uint8_t byte_player_E;
-
-uint8_t botoes_player_0;
-uint8_t botoes_player_A;
-uint8_t botoes_player_B;
-uint8_t botoes_player_C;
-uint8_t botoes_player_D;
-uint8_t botoes_player_E;
-
-uint8_t resposta_player_A;
-uint8_t resposta_player_B;
-uint8_t resposta_player_C;
-uint8_t resposta_player_D;
-uint8_t resposta_player_E;
-
-uint8_t pontuacao_player_A;
-uint8_t pontuacao_player_B;
-uint8_t pontuacao_player_C;
-uint8_t pontuacao_player_D;
-uint8_t pontuacao_player_E;
-
-uint8_t reset_leds;
-uint8_t iniciar_rodada;
-uint8_t finalizar_rodada;
-uint8_t resposta_certa;
-
-#define botao_A 0b111110
-#define botao_B 0b111101
-#define botao_C 0b111011
-#define botao_D 0b110111
-#define botao_INICIAR 0b011111
-#define botao_FINALIZAR 0b101111
-
-// Inicializa o display no endereco 0x27
 Adafruit_LiquidCrystal lcd(0x27); // O endereco de fabrica do LCD geralmente é 0x27 ou 0x7F
 
 void setup()
 {
-  // Resetando os leds
   Wire.begin();       // Inicializa a comunicacao i2c
   Serial.begin(9600); // start serial for output
   // Escrevendo no LCD os caracteres que nao se alteram
@@ -74,68 +28,6 @@ void setup()
   pontuacao_player_E = 0;
 }
 
-void writeData(uint8_t device, uint8_t byte)
-{
-  Wire.beginTransmission(device);
-  Wire.write(byte);       // Envia o byte ao dispositivo
-  Wire.endTransmission(); // Finaliza a comunicacao com o dispositivo i2c
-}
-
-uint8_t readData(uint8_t device, uint8_t count, uint8_t mask)
-{
-  Wire.requestFrom(device, count); // Solicita o estado das portas do dispositivo
-  uint8_t byte = Wire.read();      // Salva na variavel o byte enviado pelo dispositivo
-  byte = byte & mask;
-
-  return byte;
-}
-
-uint8_t verify_buttons_players(uint8_t device)
-{
-  uint8_t botoes_player = readData(device, 1, 0b00001111);
-  uint8_t resposta_player = botoes_player;
-
-  Serial.println(botoes_player);
-
-  switch (botoes_player)
-  {
-  case botao_A << 2:
-    writeData(device, 0b11101111);
-    Serial.println("Jogador apertou a opcao 'A'"); // Imprime no terminal
-    break;
-
-  case botao_B << 2:
-    writeData(device, 0b11011111);
-    Serial.println("Jogador apertou a opcao 'B'"); // Imprime no terminal
-    break;
-  case botao_C << 2:
-    writeData(device, 0b10111111);
-    Serial.println("Jogador apertou a opcao 'C'"); // Imprime no terminal
-    break;
-  case botao_D << 2:
-    writeData(device, 0b01111111);
-    Serial.println("Jogador apertou a opcao 'D'"); // Imprime no terminal
-    break;
-
-  default:
-    break;
-  }
-
-  return resposta_player;
-}
-
-uint8_t verify_answer_players(uint8_t answer_player, uint8_t answer_correct)
-{
-  if (answer_player == answer_correct)
-  {
-    return (uint8_t)1;
-  }
-  else
-  {
-    return (uint8_t)0;
-  }
-}
-
 void loop()
 {
   if (reset_leds == 1) // Se o jogo foi resetado
@@ -154,7 +46,8 @@ void loop()
     Serial.println("Playes Resetados.");
   }
   // Player 0, o que define qual eh a alternativa correta
-  botoes_player_0 = readData(ENDERECO_PCF8574_PLAYER_0, 1, 0b00111111);
+  botoes_player_0 = readData(ENDERECO_PCF8574_PLAYER_0, 1, botoes_mestre);
+  
 
 
   switch (botoes_player_0)
@@ -268,3 +161,4 @@ void loop()
     finalizar_rodada = 0;
   }
 }
+
