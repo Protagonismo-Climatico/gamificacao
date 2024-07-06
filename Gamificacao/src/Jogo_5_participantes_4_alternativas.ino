@@ -1,6 +1,37 @@
 #include "Adafruit_LiquidCrystal.h"
 #include "header.h"
 
+uint8_t byte_player_0;
+uint8_t byte_player_A;
+uint8_t byte_player_B;
+uint8_t byte_player_C;
+uint8_t byte_player_D;
+uint8_t byte_player_E;
+
+uint8_t botoes_player_0;
+uint8_t botoes_player_A;
+uint8_t botoes_player_B;
+uint8_t botoes_player_C;
+uint8_t botoes_player_D;
+uint8_t botoes_player_E;
+
+uint8_t resposta_player_A;
+uint8_t resposta_player_B;
+uint8_t resposta_player_C;
+uint8_t resposta_player_D;
+uint8_t resposta_player_E;
+
+uint8_t pontuacao_player_A;
+uint8_t pontuacao_player_B;
+uint8_t pontuacao_player_C;
+uint8_t pontuacao_player_D;
+uint8_t pontuacao_player_E;
+
+uint8_t reset_leds;
+uint8_t iniciar_rodada;
+uint8_t finalizar_rodada;
+uint8_t resposta_certa;
+
 Adafruit_LiquidCrystal lcd(0x27); // O endereco de fabrica do LCD geralmente é 0x27 ou 0x7F
 
 void setup()
@@ -47,8 +78,6 @@ void loop()
   }
   // Player 0, o que define qual eh a alternativa correta
   botoes_player_0 = readData(ENDERECO_PCF8574_PLAYER_0, 1, botoes_mestre);
-  
-
 
   switch (botoes_player_0)
   {
@@ -161,4 +190,3 @@ void loop()
     finalizar_rodada = 0;
   }
 }
-
