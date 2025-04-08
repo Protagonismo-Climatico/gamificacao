@@ -1,6 +1,28 @@
-#include "Adafruit_LiquidCrystal.h"
+#include <Adafruit_LiquidCrystal.h>
+
+#include <LiquidCrystal_I2C.h>
+
+#include "Wire.h"
+#include <LiquidCrystal_I2C.h>
 
 #define MAX_JOGADORES 6
+
+void writeData(uint8_t device, uint8_t byte)
+{
+    Wire.beginTransmission(device);
+    Wire.write(byte);       // Envia o byte ao dispositivo
+    Wire.endTransmission(); // Finaliza a comunicacao com o dispositivo i2c
+    delay(1);
+}
+
+uint8_t readData(uint8_t device, uint8_t count, uint8_t mask)
+{
+    Wire.requestFrom(device, count); // Solicita o estado das portas do dispositivo
+    uint8_t byte = Wire.read();      // Salva na variavel o byte enviado pelo dispositivo
+    byte = byte & mask;
+
+    return byte;
+}
 
 enum EnderecosI2C
 {
@@ -9,8 +31,8 @@ enum EnderecosI2C
     PLAYER_C = 0x22,
     PLAYER_D = 0x23,
     PLAYER_E = 0x24,
-    PLAYER_F = 0x25,
-    PROFESSOR = 0x26
+    PLAYER_F = 0x26,
+    PROFESSOR = 0x25
 };
 
 enum Botoes
@@ -25,7 +47,7 @@ enum Botoes
     BOTOES_MESTRE = 0b11111111
 };
 
-Adafruit_LiquidCrystal lcd(0x27);
+LiquidCrystal_I2C lcd(0x27,16,2);
 
 uint8_t reset_leds;
 uint8_t iniciar_rodada;
@@ -328,7 +350,7 @@ void Jogo::verificar_botoes_jogadores()
         for (int i = 0; i < MAX_JOGADORES; i++)
         {
             this->jogador[i].verificar_botao_pressionado();
-        } // Adicionar tempo de cada jogada na classe Jogo
+        } 
         if (this->jogador[0].resposta)
         {
             continuar = false;
@@ -353,7 +375,8 @@ Jogo jogo(3, professor);
 void setup()
 {
     Serial.begin(9600);
-    lcd.begin(16, 2);
+    lcd.init(); 
+      lcd.backlight();
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Setup completed");
@@ -377,22 +400,7 @@ void setup()
     lcd.print("Setup finalizado!");
 }
 
-void writeData(uint8_t device, uint8_t byte)
-{
-    Wire.beginTransmission(device);
-    Wire.write(byte);       // Envia o byte ao dispositivo
-    Wire.endTransmission(); // Finaliza a comunicacao com o dispositivo i2c
-    delay(1);
-}
 
-uint8_t readData(uint8_t device, uint8_t count, uint8_t mask)
-{
-    Wire.requestFrom(device, count); // Solicita o estado das portas do dispositivo
-    uint8_t byte = Wire.read();      // Salva na variavel o byte enviado pelo dispositivo
-    byte = byte & mask;
-
-    return byte;
-}
 
 void loop()
 {
