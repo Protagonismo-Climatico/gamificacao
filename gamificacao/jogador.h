@@ -1,10 +1,9 @@
 
 #ifndef JOGADOR_H
 #define JOGADOR_H
-#include <stdint.h>
 #include "header.h"
-#include "Arduino.h"
 #include "util.h"
+
 
 class Jogador
 {

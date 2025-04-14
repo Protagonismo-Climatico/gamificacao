@@ -7,8 +7,7 @@ uint8_t reset_leds;
 uint8_t iniciar_rodada;
 uint8_t finalizar_rodada;
 
-Professor professor('P', PROFESSOR);
-Jogo jogo(3, professor);
+Jogo jogo(3);
 
 void setup() {
   Serial.begin(9600);
@@ -18,6 +17,7 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("Setup completed");
 
+  jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
   jogo.jogador[1] = Jogador('B', PLAYER_B);
   jogo.jogador[2] = Jogador('C', PLAYER_C);

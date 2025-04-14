@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
-#include "Arduino.h"
-#include <Wire.h>
+#include "./header.h"
+
 class Util
 {
 public:

@@ -4,7 +4,6 @@
 #include "./professor.h"
 #include "./header.h"
 #include "util.h"
-#include <stdint.h>
 class Jogo
 {
 public:
@@ -15,8 +14,8 @@ public:
     Jogador jogador[MAX_JOGADORES];
     Professor professor;
 
-    Jogo(uint8_t rodadas, Professor professor)
-        : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0), professor(professor)
+    Jogo(uint8_t rodadas)
+        : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0)
     {
         this->iniciar_jogo = false;
     }

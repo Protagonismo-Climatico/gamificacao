@@ -1,7 +1,11 @@
 #ifndef HEADER_H
 #define HEADER_H
-#define MAX_JOGADORES 6
+
 #include <stdint.h>
+#include "Arduino.h"
+#include <Wire.h>
+
+#define MAX_JOGADORES 6
 
 enum EnderecosI2C
 {
@@ -10,8 +14,8 @@ enum EnderecosI2C
     PLAYER_C = 0x22,
     PLAYER_D = 0x23,
     PLAYER_E = 0x24,
-    PLAYER_F = 0x26,
-    PROFESSOR = 0x25
+    PLAYER_F = 0x25,
+    PROFESSOR = 0x26
 };
 
 enum Botoes

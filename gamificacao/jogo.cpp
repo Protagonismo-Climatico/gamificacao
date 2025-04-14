@@ -1,7 +1,5 @@
 #include "./jogo.h"
-#include "Wire.h"
-#include <stdint.h>
-#include "Arduino.h"
+
 
 void Jogo::definir_resposta_certa()
 {
