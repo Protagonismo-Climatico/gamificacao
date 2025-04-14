@@ -78,3 +78,8 @@ void Jogo::pontuar_jogadores()
         }
     }
 }
+
+void Jogo::iniciar_jogo()
+{
+    this->ativo = true;
+}

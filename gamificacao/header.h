@@ -1,8 +1,7 @@
 #ifndef HEADER_H
 #define HEADER_H
 
-#include <stdint.h>
-#include "Arduino.h"
+
 #include <Wire.h>
 
 #define MAX_JOGADORES 6

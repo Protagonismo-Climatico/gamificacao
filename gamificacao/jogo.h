@@ -10,16 +10,16 @@ public:
     uint8_t rodadas;
     uint8_t rodadas_restantes;
     uint8_t resposta_certa;
-    bool iniciar_jogo;
+    bool ativo;
     Jogador jogador[MAX_JOGADORES];
     Professor professor;
 
     Jogo(uint8_t rodadas)
         : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0)
     {
-        this->iniciar_jogo = false;
+        this->ativo = false;
     }
-
+    void iniciar_jogo();
     void definir_resposta_certa();
     void finalizarRodada();
     void finalizarJogo();

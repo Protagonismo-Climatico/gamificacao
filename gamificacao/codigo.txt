@@ -1,0 +1,352 @@
+#include <Wire.h>
+#include "Adafruit_LiquidCrystal.h"
+
+
+
+#define MAX_JOGADORES 6
+
+enum EnderecosI2C
+{
+    PLAYER_A = 0x20,
+    PLAYER_B = 0x21,
+    PLAYER_C = 0x22,
+    PLAYER_D = 0x23,
+    PLAYER_E = 0x24,
+    PLAYER_F = 0x25,
+    PROFESSOR = 0x26
+};
+
+enum Botoes
+{
+    BOTAO_INICIAR = 0b11011111,
+    BOTAO_FINALIZAR = 0b11101111,
+    BOTAO_A = 0b11110111,
+    BOTAO_B = 0b11111011,
+    BOTAO_C = 0b11111101,
+    BOTAO_D = 0b11111110,
+    BOTOES_JOGADOR = 0b00001111,
+    BOTOES_MESTRE = 0b11111111
+};
+
+
+
+
+class Util
+{
+public:
+    Util() {}
+
+    static void escreverDado(uint8_t device, uint8_t byte);
+    static uint8_t lerBotao(uint8_t device, uint8_t count, uint8_t mask);
+};
+
+
+
+class Jogador
+{
+public:
+    char nome;
+    uint8_t pontuacao;
+    uint8_t resposta;
+    uint8_t endereco;
+    uint8_t botao_pressionado;
+
+    Jogador(char nome, uint8_t endereco)
+        : nome(nome), pontuacao(0), resposta(0x0), endereco(endereco), botao_pressionado(0) {}
+
+    Jogador() : nome(' '), pontuacao(0), resposta(0x0), endereco(0), botao_pressionado(0) {}
+
+    void verificar_botao_pressionado();
+    void marcar_ponto(uint8_t ponto);
+    void reiniciar_jogador();
+};
+
+
+class Professor {
+public:
+  char nome;
+  uint8_t endereco;
+  uint8_t botao_pressionado;
+
+  Professor(char nome, uint8_t endereco)
+    : nome(nome), endereco(endereco), botao_pressionado(0) {}
+  Professor()
+    : nome(' '), endereco(0), botao_pressionado(0) {}
+
+
+  void verificar_botao_pressionado();
+};
+
+class Jogo
+{
+public:
+    uint8_t rodadas;
+    uint8_t rodadas_restantes;
+    uint8_t resposta_certa;
+    bool ativo;
+    Jogador jogador[MAX_JOGADORES];
+    Professor professor;
+
+    Jogo(uint8_t rodadas)
+        : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0)
+    {
+        this->ativo = false;
+    }
+    void iniciar_jogo();
+    void definir_resposta_certa();
+    void finalizarRodada();
+    void finalizarJogo();
+    void definir_quantidade_rodadas();
+    void reiniciar_jogadores();
+    void verificar_botoes_jogadores();
+    void pontuar_jogadores();
+    void redefinir_respostas_jogadores();
+};
+
+
+void Jogador::verificar_botao_pressionado()
+{
+    uint8_t botao_pressionado_atual = Util::lerBotao(this->endereco, 1, 0b11111111);
+    uint8_t botao_pressionado_anterior = this->botao_pressionado;
+
+    if (botao_pressionado_atual != 0b11111111 && botao_pressionado_atual != botao_pressionado_anterior && this->resposta == 0x0)
+    {
+        switch (botao_pressionado_atual)
+        {
+        case BOTAO_A:
+            Serial.println("O jogador apertou a opcao 'A'");
+            this->resposta = BOTAO_A;
+            break;
+        case BOTAO_B:
+            Serial.println("O jogador apertou a opcao 'B'");
+            this->resposta = BOTAO_B;
+            break;
+        case BOTAO_C:
+            Serial.println("O jogador apertou a opcao 'C'");
+            this->resposta = BOTAO_C;
+            break;
+        case BOTAO_D:
+            Serial.println("O jogador apertou a opcao 'D'");
+            this->resposta = BOTAO_D;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void Jogador::marcar_ponto(uint8_t ponto)
+{
+    this->pontuacao += ponto;
+}
+
+void Jogador::reiniciar_jogador()
+{
+    Util::escreverDado(this->endereco, 0b11111111);
+    this->resposta = 0;
+    this->botao_pressionado = 0;
+}
+
+void Jogo::definir_resposta_certa()
+{
+    bool continuar = true;
+    uint8_t resposta_anterior = this->resposta_certa;
+    uint8_t botao_pressionado = Util::lerBotao(PROFESSOR, 1, 0b11111111);
+
+    while (continuar)
+    {
+        if (botao_pressionado == BOTAO_A || botao_pressionado == BOTAO_B || botao_pressionado == BOTAO_C || botao_pressionado == BOTAO_D)
+        {
+            this->resposta_certa = botao_pressionado;
+            continuar = false;
+        }
+        botao_pressionado = Util::lerBotao(PROFESSOR, 1, 0b11111111);
+    }
+}
+
+void Jogo::finalizarRodada()
+{
+    this->rodadas_restantes -= 1;
+    this->resposta_certa = 0x0;
+    if (this->rodadas_restantes <= 0)
+    {
+        finalizarJogo();
+    }
+}
+
+void Jogo::redefinir_respostas_jogadores()
+{
+    for (int i = 0; i < MAX_JOGADORES; i++)
+    {
+        this->jogador[i].resposta = 0x0;
+    }
+}
+
+void Jogo::finalizarJogo()
+{
+    Serial.print("Acabou o jogo!");
+}
+
+
+void Jogo::reiniciar_jogadores()
+{
+    for (int i = 0; i < MAX_JOGADORES; i++)
+    {
+        jogador[i].reiniciar_jogador();
+    }
+}
+
+void Jogo::verificar_botoes_jogadores()
+{
+    bool continuar = true;
+
+    while (continuar)
+    {
+        for (int i = 0; i < MAX_JOGADORES; i++)
+        {
+            this->jogador[i].verificar_botao_pressionado();
+        } 
+        if (this->jogador[0].resposta)
+        {
+            continuar = false;
+        }
+        // TODO tempo de resposta dos usuarios
+    }
+}
+
+void Jogo::pontuar_jogadores()
+{
+    for (uint8_t i = 0; i < MAX_JOGADORES; i++)
+    {
+        if (this->jogador[i].resposta == this->resposta_certa)
+        {
+            this->jogador[i].marcar_ponto(1);
+        }
+    }
+}
+
+void Jogo::iniciar_jogo()
+{
+    this->ativo = true;
+}
+void Professor::verificar_botao_pressionado()
+{
+    uint8_t botao_pressionado_atual = Util::lerBotao(this->endereco, 1, 0b11111111);
+    uint8_t botao_pressionado_anterior = this->botao_pressionado;
+
+    if (botao_pressionado_atual != 0b11111111 && botao_pressionado_atual != botao_pressionado_anterior)
+    {
+        switch (botao_pressionado_atual)
+        {
+        case BOTAO_A:
+            Serial.println("O Professor apertou a opcao 'A'");
+            this->botao_pressionado = BOTAO_A;
+            break;
+        case BOTAO_B:
+            Serial.println("O Professor apertou a opcao 'B'");
+            this->botao_pressionado = BOTAO_B;
+            break;
+        case BOTAO_C:
+            Serial.println("O Professor apertou a opcao 'C'");
+            this->botao_pressionado = BOTAO_C;
+            break;
+        case BOTAO_D:
+            Serial.println("O Professor apertou a opcao 'D'");
+            this->botao_pressionado = BOTAO_D;
+            break;
+        case BOTAO_INICIAR:
+            Serial.println("Iniciar rodada");
+            this->botao_pressionado = BOTAO_INICIAR;
+            break;
+        case BOTAO_FINALIZAR:
+            this->botao_pressionado = BOTAO_FINALIZAR;
+            break;
+        default:
+            break;
+        }
+    }
+}
+void Util::escreverDado(uint8_t device, uint8_t byte)
+{
+    Wire.beginTransmission(device);
+    Wire.write(byte);
+    Wire.endTransmission();
+    delay(1);
+}
+
+uint8_t Util::lerBotao(uint8_t device, uint8_t count, uint8_t mask)
+{
+    Wire.requestFrom(device, count);
+    uint8_t byte = Wire.read();
+    byte = byte & mask;
+
+    return byte;
+}
+Adafruit_LiquidCrystal lcd(0x27);
+
+uint8_t reset_leds;
+uint8_t iniciar_rodada;
+uint8_t finalizar_rodada;
+
+Jogo jogo(3);
+
+void setup()
+{
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Setup completed");
+
+  jogo.professor = Professor('P', PROFESSOR);
+  jogo.jogador[0] = Jogador('A', PLAYER_A);
+  jogo.jogador[1] = Jogador('B', PLAYER_B);
+  jogo.jogador[2] = Jogador('C', PLAYER_C);
+  jogo.jogador[3] = Jogador('D', PLAYER_D);
+  jogo.jogador[4] = Jogador('E', PLAYER_E);
+  jogo.jogador[5] = Jogador('F', PLAYER_F);
+
+  iniciar_rodada = 0;
+  finalizar_rodada = 0;
+  reset_leds = 1;
+
+  jogo.reiniciar_jogadores();
+  jogo.iniciar_jogo();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Jogo iniciado!");
+}
+
+void loop()
+{
+
+  while (jogo.ativo)
+  {
+    Serial.print("Definindo resposta...");
+    lcd.clear();
+    lcd.setCursor(0, 0); 
+    lcd.print("Prestem atencao");
+    jogo.definir_resposta_certa();
+    jogo.verificar_botoes_jogadores();
+    jogo.pontuar_jogadores();
+    jogo.redefinir_respostas_jogadores();
+
+
+    lcd.clear();
+    lcd.setCursor(0, 0); 
+    lcd.print("PLA|");
+    lcd.setCursor(0, 1);
+    lcd.print("CAR|");
+    
+    uint8_t index_jogador = 0;
+    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2)
+    {
+      lcd.setCursor(i, 0); // Coluna, Linha
+      lcd.print(jogo.jogador[index_jogador].nome);
+      lcd.setCursor(i, 1); // Coluna, Linha
+      lcd.print(jogo.jogador[index_jogador].pontuacao);
+      index_jogador++;
+    }
+  }
+}

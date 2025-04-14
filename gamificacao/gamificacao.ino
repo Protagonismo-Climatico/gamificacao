@@ -1,7 +1,7 @@
 #include "jogo.h"
-#include <LiquidCrystal_I2C.h>
+#include "Adafruit_LiquidCrystal.h"
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+Adafruit_LiquidCrystal lcd(0x27);
 
 uint8_t reset_leds;
 uint8_t iniciar_rodada;
@@ -9,10 +9,10 @@ uint8_t finalizar_rodada;
 
 Jogo jogo(3);
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  lcd.init();
-  lcd.backlight();
+  lcd.begin(16, 2);
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Setup completed");
@@ -30,31 +30,42 @@ void setup() {
   reset_leds = 1;
 
   jogo.reiniciar_jogadores();
+  jogo.iniciar_jogo();
 
-  delay(2000);
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Setup finalizado!");
+  lcd.print("Jogo iniciado!");
 }
 
-void loop() {
-  Serial.print(jogo.jogador[0].pontuacao);
+void loop()
+{
 
-  while (jogo.iniciar_jogo) {
-    Serial.print("Jogo Iniciado!");
+  if (jogo.ativo)
+  {
+    Serial.print("Definindo resposta...");
+    lcd.clear();
+    lcd.setCursor(0, 0); 
+    lcd.print("Prestem atencao");
     jogo.definir_resposta_certa();
     jogo.verificar_botoes_jogadores();
     jogo.pontuar_jogadores();
     jogo.redefinir_respostas_jogadores();
 
-    Serial.print(jogo.jogador[0].pontuacao);
-
-    uint8_t index = 0;
-    for (uint8_t i = 7; i < 15; i += 2) {
-      lcd.setCursor(i, 4);  // Coluna, Linha
-      lcd.print(jogo.jogador[index].pontuacao);
-      index++;
+    lcd.clear();
+    lcd.setCursor(0, 0); 
+    lcd.print("PLA|");
+    lcd.setCursor(0, 1);
+    lcd.print("CAR|");
+    
+    uint8_t index_jogador = 0;
+    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2)
+    {
+      lcd.setCursor(i, 0); // Coluna, Linha
+      lcd.print(jogo.jogador[index_jogador].nome);
+      lcd.setCursor(i, 1); // Coluna, Linha
+      lcd.print(jogo.jogador[index_jogador].pontuacao);
+      index_jogador++;
     }
-    // jogo.iniciar_jogo = 0;
+    jogo.ativo = false;
   }
 }

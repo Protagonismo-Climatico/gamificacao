@@ -24,19 +24,23 @@ def filtrar_codigo(lista_codigo,lista_filto):
         flag = 0
     return lista_filtrada
 
+def escrever_arquivo(includes_filtrados, codigo_filtrado):
+    with open('codigo.txt', 'w') as arquivo:
+        for include in includes_filtrados:
+            arquivo.write(include)
+        for codigo in codigo_filtrado:
+            arquivo.write(codigo)
+    print("Arquivo gerado, more. <3")
+
 def main():
-    lista_arquivos = ["header.h", "jogador.cpp", "jogador.h", "jogo.cpp", "jogo.h", "professor.cpp", "professor.h", "util.cpp", "util.h", "gamificacao.ino"]
+    lista_arquivos = ["header.h","util.h", "jogador.h","professor.h", "jogo.h", "jogador.cpp", "jogo.cpp", "professor.cpp", "util.cpp", "gamificacao.ino"]
     lista_palavras_proibidas = ["#endif","HEADER_H", "JOGADOR_H", "JOGO_H", "PROFESSOR_H", "UTIL_H"]
 
     lista_includes, lista_codigo = extrair_codigo(lista_arquivos)
     includes_filtrados = filtrar_codigo(lista_includes, lista_arquivos)
     codigo_filtrado = filtrar_codigo(lista_codigo, lista_palavras_proibidas)
 
-    for include in includes_filtrados:
-        print(include)
-
-    for codigo in codigo_filtrado:
-        print(codigo)
+    escrever_arquivo(includes_filtrados, codigo_filtrado)
     
 
 
