@@ -4,18 +4,22 @@
 #include "util.h"
 
 class Professor {
+
+private:
+  uint8_t endereco_;
+  char nome_;
+
 public:
-  char nome;
-  uint8_t endereco;
-  uint8_t botao_pressionado;
 
   Professor(char nome, uint8_t endereco)
-    : nome(nome), endereco(endereco), botao_pressionado(0) {}
+    : nome_(nome), endereco_(endereco) {}
   Professor()
-    : nome(' '), endereco(0), botao_pressionado(0) {}
+    : nome_('P'), endereco_(0) {}
 
 
-  void verificar_botao_pressionado();
+  Botao verificarBotaoPressionado();
+  uint8_t obterEndereco();
+  char obterNome();
 };
 
 #endif

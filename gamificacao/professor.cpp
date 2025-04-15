@@ -1,39 +1,43 @@
 #include "professor.h"
 
-void Professor::verificar_botao_pressionado()
-{
-    uint8_t botao_pressionado_atual = Util::lerBotao(this->endereco, 1, 0b11111111);
-    uint8_t botao_pressionado_anterior = this->botao_pressionado;
+uint8_t Professor::obterEndereco(){
+    return this->endereco_;
+}
+char Professor::obterNome(){
+    return this->nome_;
+}
 
-    if (botao_pressionado_atual != 0b11111111 && botao_pressionado_atual != botao_pressionado_anterior)
+Botao Professor::verificarBotaoPressionado()
+{
+    uint8_t botao_pressionado_atual = Util::lerBotao(this->obterEndereco(), 1, 0b11111111);
+    uint8_t botao_pressionado_anterior = BOTAO_INVALIDO;
+    static unsigned long tempo_anterior = 0;
+
+    if (botao_pressionado_atual != BOTAO_INVALIDO && millis() - tempo_anterior > 50)
     {
+        tempo_anterior = millis();
         switch (botao_pressionado_atual)
         {
         case BOTAO_A:
             Serial.println("O Professor apertou a opcao 'A'");
-            this->botao_pressionado = BOTAO_A;
-            break;
+            return BOTAO_A;
         case BOTAO_B:
             Serial.println("O Professor apertou a opcao 'B'");
-            this->botao_pressionado = BOTAO_B;
-            break;
+            return BOTAO_B;
         case BOTAO_C:
             Serial.println("O Professor apertou a opcao 'C'");
-            this->botao_pressionado = BOTAO_C;
-            break;
+            return BOTAO_C;
         case BOTAO_D:
             Serial.println("O Professor apertou a opcao 'D'");
-            this->botao_pressionado = BOTAO_D;
-            break;
+            return BOTAO_D;
         case BOTAO_INICIAR:
             Serial.println("Iniciar rodada");
-            this->botao_pressionado = BOTAO_INICIAR;
-            break;
+            return BOTAO_INICIAR;
         case BOTAO_FINALIZAR:
-            this->botao_pressionado = BOTAO_FINALIZAR;
-            break;
+                Serial.println("Finalizar rodada");
+            return BOTAO_FINALIZAR;
         default:
-            break;
+            return BOTAO_INVALIDO;
         }
     }
 }

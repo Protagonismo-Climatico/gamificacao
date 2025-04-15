@@ -3,7 +3,7 @@
 
 
 #include <Wire.h>
-
+#include <Arduino.h>
 #define MAX_JOGADORES 6
 
 enum EnderecosI2C
@@ -17,7 +17,7 @@ enum EnderecosI2C
     PROFESSOR = 0x26
 };
 
-enum Botoes
+enum Botao
 {
     BOTAO_INICIAR = 0b11011111,
     BOTAO_FINALIZAR = 0b11101111,
@@ -26,7 +26,8 @@ enum Botoes
     BOTAO_C = 0b11111101,
     BOTAO_D = 0b11111110,
     BOTOES_JOGADOR = 0b00001111,
-    BOTOES_MESTRE = 0b11111111
+    BOTOES_MESTRE = 0b11111111,
+    BOTAO_INVALIDO = 0b00000000
 };
 
 
