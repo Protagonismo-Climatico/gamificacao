@@ -39,6 +39,7 @@ public:
 
     static void escreverDado(uint8_t device, uint8_t byte);
     static uint8_t lerBotao(uint8_t device, uint8_t count, uint8_t mask);
+
 };
 
 
@@ -94,30 +95,25 @@ public:
   char obterNome();
 };
 
-class Jogo
-{
+class Jogo {
 public:
-    uint8_t rodadas;
-    uint8_t rodadas_restantes;
-    uint8_t resposta_certa;
-    bool ativo;
-    Jogador jogador[MAX_JOGADORES];
-    Professor professor;
+  uint8_t rodadas;
+  uint8_t rodadas_restantes;
+  uint8_t resposta_certa;
+  bool ativo;
+  Jogador jogador[MAX_JOGADORES];
+  Professor professor;
 
-    Jogo(uint8_t rodadas)
-        : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0)
-    {
-        this->ativo = false;
-    }
-    void iniciar_jogo();
-    void definir_resposta_certa();
-    void finalizarRodada();
-    void finalizarJogo();
-    void definir_quantidade_rodadas();
-    void reiniciar_jogadores();
-    void verificar_botoes_jogadores();
-    void pontuar_jogadores();
-    void redefinir_respostas_jogadores();
+  Jogo(uint8_t rodadas)
+    : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0), ativo(false) {
+  }
+  void iniciar_jogo();
+  Botao definir_resposta_certa();
+  void finalizarJogo();
+  void reiniciar_jogadores();
+  void verificar_botoes_jogadores();
+  void pontuar_jogadores(Botao, uint8_t);
+  void redefinir_respostas_jogadores();
 };
 
 
@@ -192,24 +188,13 @@ void Jogador::reiniciar_jogador() {
   this->definirResposta(BOTAO_INVALIDO);
 }
 
-void Jogo::definir_resposta_certa() {
-  bool continuar = true;
-  uint8_t resposta_anterior = this->resposta_certa;
-  uint8_t botao_pressionado = Util::lerBotao(PROFESSOR, 1, 0b11111111);
-
-  while (continuar) {
-    if (botao_pressionado == BOTAO_A || botao_pressionado == BOTAO_B || botao_pressionado == BOTAO_C || botao_pressionado == BOTAO_D) {
-      this->resposta_certa = botao_pressionado;
-      continuar = false;
-    }
+Botao Jogo::definir_resposta_certa() {
+  Botao botao_pressionado = BOTAO_INVALIDO;
+  while (true) {
     botao_pressionado = this->professor.verificarBotaoPressionado();
-  }
-}
-
-void Jogo::finalizarRodada() {
-  this->resposta_certa = 0x0;
-  if (this->rodadas_restantes <= 0) {
-    finalizarJogo();
+    if(botao_pressionado != BOTAO_INVALIDO){
+      return botao_pressionado;
+    }
   }
 }
 
@@ -218,12 +203,6 @@ void Jogo::redefinir_respostas_jogadores() {
     this->jogador[i].definirResposta(0x0);
   }
 }
-
-void Jogo::finalizarJogo() {
-  Serial.print("Acabou o jogo!");
-  this->ativo = false;
-}
-
 
 void Jogo::reiniciar_jogadores() {
   for (int i = 0; i < MAX_JOGADORES; i++) {
@@ -245,16 +224,22 @@ void Jogo::verificar_botoes_jogadores() {
   }
 }
 
-void Jogo::pontuar_jogadores() {
+void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
   for (uint8_t i = 0; i < MAX_JOGADORES; i++) {
-    if (this->jogador[i].obterResposta() == this->resposta_certa) {
-      this->jogador[i].marcar_ponto(1);
+    if (this->jogador[i].obterResposta() == resposta) {
+      this->jogador[i].marcar_ponto(pontos);
     }
   }
 }
 
 void Jogo::iniciar_jogo() {
+  Serial.print("Jogo inicado!");
   this->ativo = true;
+}
+
+void Jogo::finalizarJogo() {
+  Serial.print("Acabou o jogo!");
+  this->ativo = false;
 }
 uint8_t Professor::obterEndereco(){
     return this->endereco_;
@@ -286,12 +271,6 @@ Botao Professor::verificarBotaoPressionado()
         case BOTAO_D:
             Serial.println("O Professor apertou a opcao 'D'");
             return BOTAO_D;
-        case BOTAO_INICIAR:
-            Serial.println("Iniciar rodada");
-            return BOTAO_INICIAR;
-        case BOTAO_FINALIZAR:
-                Serial.println("Finalizar rodada");
-            return BOTAO_FINALIZAR;
         default:
             return BOTAO_INVALIDO;
         }
@@ -313,23 +292,20 @@ uint8_t Util::lerBotao(uint8_t device, uint8_t count, uint8_t mask)
 
     return byte;
 }
+
 Adafruit_LiquidCrystal lcd(0x27);
 
-uint8_t reset_leds;
-uint8_t iniciar_rodada;
-uint8_t finalizar_rodada;
 unsigned long tempo_segundos = 0;
 
 Jogo jogo(3);
 unsigned long tempo_anterior = 0;
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Setup completed");
+  lcd.print("Configurado.");
 
   jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
@@ -339,59 +315,70 @@ void setup()
   jogo.jogador[4] = Jogador('E', PLAYER_E);
   jogo.jogador[5] = Jogador('F', PLAYER_F);
 
-  iniciar_rodada = 0;
-  finalizar_rodada = 0;
-  reset_leds = 1;
-
   jogo.reiniciar_jogadores();
-  jogo.iniciar_jogo();
 
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Jogo iniciado!");
 }
 
-void loop()
-{
-  unsigned long tempo_atual = millis();
-
-  if (jogo.ativo)
-  {
+void loop() {
+  if (jogo.ativo) {
     Serial.print("Definindo resposta...");
     lcd.clear();
-    lcd.setCursor(5, 0); 
+    lcd.setCursor(5, 0);
     lcd.print("Gerando");
-    lcd.setCursor(3, 1); 
+    lcd.setCursor(3, 1);
     lcd.print("Pergunta...");
-    jogo.definir_resposta_certa();
+    Botao resposta_certa = jogo.definir_resposta_certa();
+
+
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Iniciando em...");
+    lcd.setCursor(0, 4);
+
+    for (uint8_t i = 3; i > 0; i--) {
+      lcd.setCursor(5, 4);
+      lcd.print(i);
+      lcd.print(" segundos");
+      delay(3 * 1000);
+    }
+    lcd.clear();
+    lcd.setCursor(6, 0);
+    lcd.print("Vai!");
+
+
+
     jogo.verificar_botoes_jogadores();
-    jogo.pontuar_jogadores();
+    jogo.pontuar_jogadores(resposta_certa, 1);
     jogo.redefinir_respostas_jogadores();
 
     lcd.clear();
-    lcd.setCursor(0, 0); 
+    lcd.setCursor(0, 0);
     lcd.print("PLA|");
     lcd.setCursor(0, 1);
     lcd.print("CAR|");
-    
+
     uint8_t index_jogador = 0;
-    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2)
-    {
-      lcd.setCursor(i, 0); // Coluna, Linha
+    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2) {
+      lcd.setCursor(i, 0);  // Coluna, Linha
       lcd.print(jogo.jogador[index_jogador].obterNome());
-      lcd.setCursor(i, 1); // Coluna, Linha
+      lcd.setCursor(i, 1);  // Coluna, Linha
       lcd.print(jogo.jogador[index_jogador].obterPontuacao());
       index_jogador++;
     }
-    jogo.ativo = false;
+    jogo.finalizarJogo();
   }
-  Botao botao_pressionado  = jogo.professor.verificarBotaoPressionado();
+  unsigned long tempo_atual = millis();
+  Botao botao_pressionado = jogo.professor.verificarBotaoPressionado();
 
-  if(botao_pressionado == BOTAO_A && tempo_atual - tempo_anterior >= 1000){
+  if (botao_pressionado == BOTAO_A && tempo_atual - tempo_anterior >= 1000) {
     tempo_anterior = tempo_atual;
     tempo_segundos++;
-    if(tempo_segundos >= 2){
-      jogo.ativo = true;
+    if (tempo_segundos >= 2) {
+      jogo.iniciar_jogo();
       tempo_segundos = 0;
     }
   }

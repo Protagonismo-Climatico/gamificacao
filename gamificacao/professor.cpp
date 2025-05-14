@@ -30,12 +30,6 @@ Botao Professor::verificarBotaoPressionado()
         case BOTAO_D:
             Serial.println("O Professor apertou a opcao 'D'");
             return BOTAO_D;
-        case BOTAO_INICIAR:
-            Serial.println("Iniciar rodada");
-            return BOTAO_INICIAR;
-        case BOTAO_FINALIZAR:
-                Serial.println("Finalizar rodada");
-            return BOTAO_FINALIZAR;
         default:
             return BOTAO_INVALIDO;
         }
