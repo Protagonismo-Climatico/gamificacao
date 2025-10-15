@@ -2,14 +2,22 @@
 
 
 Botao Jogo::definir_resposta_certa() {
-  Botao botao_pressionado = BOTAO_INVALIDO;
-  while (true) {
-    botao_pressionado = this->professor.verificarBotaoPressionado();
-    if(botao_pressionado != BOTAO_INVALIDO){
-      return botao_pressionado;
+    Botao botao_pressionado = BOTAO_INVALIDO;
+
+    // Limpa eventos pendentes (ex.: ainda segurando Start)
+    while (this->professor.verificarBotaoPressionado() != BOTAO_INVALIDO) {
+        // fica até não haver evento
     }
-  }
+
+    // Aguarda a primeira escolha válida (A/B/C/D) por borda
+    while (true) {
+        botao_pressionado = this->professor.verificarBotaoPressionado();
+        if (botao_pressionado != BOTAO_INVALIDO) {
+            return botao_pressionado;
+        }
+    }
 }
+
 
 void Jogo::redefinir_respostas_jogadores() {
   for (int i = 0; i < MAX_JOGADORES; i++) {
