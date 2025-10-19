@@ -2,19 +2,18 @@
 #include "Adafruit_LiquidCrystal.h"
 
 Adafruit_LiquidCrystal lcd(0x27);
+Jogo jogo;
+unsigned long t_ultima_mudanca = 0;    
+Botao botaoPressionado = BOTAO_INVALIDO;
+Botao botaoAnterior = BOTAO_INVALIDO;
 
-unsigned long tempo_segundos = 0;
 
-Jogo jogo(3);
-unsigned long tempo_anterior = 0;
 
 void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Configurado.");
-
+ 
+  
   jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
   jogo.jogador[1] = Jogador('B', PLAYER_B);
@@ -22,72 +21,90 @@ void setup() {
   jogo.jogador[3] = Jogador('D', PLAYER_D);
   jogo.jogador[4] = Jogador('E', PLAYER_E);
   jogo.jogador[5] = Jogador('F', PLAYER_F);
-
+  
   jogo.reiniciar_jogadores();
-
+  
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Jogo iniciado!");
+  lcd.print("Configurado.");
+
 }
 
 void loop() {
-  if (jogo.ativo) {
-    Serial.print("Definindo resposta...");
-    lcd.clear();
-    lcd.setCursor(5, 0);
-    lcd.print("Gerando");
-    lcd.setCursor(3, 1);
-    lcd.print("Pergunta...");
-    Botao resposta_certa = jogo.definir_resposta_certa();
+Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
 
+  if (millis() - t_ultima_mudanca > DEBOUNCE) {
+    t_ultima_mudanca = millis();
+    switch (jogo.estado_atual) {
+      case LCD_MENU_INICIAL:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("A - Iniciar");
+        lcd.setCursor(0, 1);
+        lcd.print("B - Finalizar");
+        jogo.estado_atual = ACAO_MENU_INICIAL;
+      break;
 
+      case ACAO_MENU_INICIAL:
+        if (botaoPressionado == BOTAO_A) {
+          Serial.println("Iniciar jogo pressionado.");
+          botaoAnterior = BOTAO_A;
+          jogo.estado_atual = LCD_DEF_RESPOSTA;
+        }else if (botaoPressionado == BOTAO_B) {
+          Serial.println("Finalizar jogo pressionado.");
+          jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+        }
+      break;
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Iniciando em...");
-    lcd.setCursor(0, 4);
+      case LCD_DEF_RESPOSTA:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Definir Resposta:");
+        lcd.setCursor(0, 1);
+        lcd.print("A/B/C/D");
+        jogo.estado_atual = ACAO_DEF_RESPOSTA;
+      break;
 
-    for (uint8_t i = 3; i > 0; i--) {
-      lcd.setCursor(5, 4);
-      lcd.print(i);
-      lcd.print(" segundos");
-      delay(3 * 1000);
-    }
-    lcd.clear();
-    lcd.setCursor(6, 0);
-    lcd.print("Vai!");
-
-
-
-    jogo.verificar_botoes_jogadores();
-    jogo.pontuar_jogadores(resposta_certa, 1);
-    jogo.redefinir_respostas_jogadores();
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("PLA|");
-    lcd.setCursor(0, 1);
-    lcd.print("CAR|");
-
-    uint8_t index_jogador = 0;
-    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2) {
-      lcd.setCursor(i, 0);  // Coluna, Linha
-      lcd.print(jogo.jogador[index_jogador].obterNome());
-      lcd.setCursor(i, 1);  // Coluna, Linha
-      lcd.print(jogo.jogador[index_jogador].obterPontuacao());
-      index_jogador++;
-    }
-    jogo.finalizarJogo();
-  }
-  unsigned long tempo_atual = millis();
-  Botao botao_pressionado = jogo.professor.verificarBotaoPressionado();
-
-  if (botao_pressionado == BOTAO_A && tempo_atual - tempo_anterior >= 1000) {
-    tempo_anterior = tempo_atual;
-    tempo_segundos++;
-    if (tempo_segundos >= 2) {
-      jogo.iniciar_jogo();
-      tempo_segundos = 0;
+      case ACAO_DEF_RESPOSTA:
+        if (botaoPressionado != botaoAnterior) {
+          botaoAnterior = botaoPressionado;
+          if(botaoPressionado != BOTAO_INVALIDO){
+            Serial.print("Resposta correta definida: ");
+            jogo.estado_atual = LCD_AGUARDAR_RESPOSTAS;
+          }
+        }
+      break;
+      case LCD_AGUARDAR_RESPOSTAS:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Aguardando jog...");
+        jogo.estado_atual = ACAO_AGUARDAR_RESPOSTAS;
+      break;
+      case ACAO_AGUARDAR_RESPOSTAS:
+        //jogo.verificar_botoes_jogadores();
+        jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+      break;
+      case LCD_MOSTRAR_RESULTADOS:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Mostrando result");
+        // Aqui você pode percorrer os jogadores e mostrar pontuação
+        jogo.estado_atual = ACAO_MOSTRAR_RESULTADOS;
+      break;
+      case ACAO_MOSTRAR_RESULTADOS:
+        // Por exemplo, pontuar jogadores
+        jogo.pontuar_jogadores(jogo.resposta_certa, 1);
+        jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+      break;
+      case ACAO_ENCERRAR_JOGO:
+        Serial.println("Jogo encerrado.");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Jogo encerrado");
+        jogo.finalizarJogo();
+        // Volta para menu inicial
+        jogo.estado_atual = LCD_MENU_INICIAL;
+      break;
     }
   }
 }

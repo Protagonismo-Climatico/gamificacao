@@ -4,6 +4,7 @@
 
 
 #define MAX_JOGADORES 6
+#define DEBOUNCE  50
 
 enum EnderecosI2C
 {
@@ -18,28 +19,42 @@ enum EnderecosI2C
 
 enum Botao
 {
-    BOTAO_INICIAR = 0b11011111,
-    BOTAO_FINALIZAR = 0b11101111,
     BOTAO_A = 0b11110111,
     BOTAO_B = 0b11111011,
     BOTAO_C = 0b11111101,
     BOTAO_D = 0b11111110,
-    BOTOES_JOGADOR = 0b00001111,
-    BOTOES_MESTRE = 0b11111111,
-    BOTAO_INVALIDO = 0b00000000
+    BOTAO_INVALIDO = 0b11111111
+
+};
+
+enum Mascara
+{
+    MASCARA_BOTOES = 0b11111111
 };
 
 
 
+enum EstadoJogo
+{
+    LCD_MENU_INICIAL,
+    ACAO_MENU_INICIAL,
+    LCD_DEF_RESPOSTA,
+    ACAO_DEF_RESPOSTA,
+    LCD_AGUARDAR_RESPOSTAS,
+    ACAO_AGUARDAR_RESPOSTAS,
+    LCD_MOSTRAR_RESULTADOS,
+    ACAO_MOSTRAR_RESULTADOS,
+    ACAO_ENCERRAR_JOGO
+};
 
 class Util
 {
 public:
     Util() {}
 
+    static bool botaoSegurado(uint8_t device, uint8_t botao, unsigned long tempoSegurar);
     static void escreverDado(uint8_t device, uint8_t byte);
     static uint8_t lerBotao(uint8_t device, uint8_t count, uint8_t mask);
-
 };
 
 
@@ -97,21 +112,21 @@ public:
 
 class Jogo {
 public:
-  uint8_t rodadas;
-  uint8_t rodadas_restantes;
-  uint8_t resposta_certa;
+  Botao resposta_certa;
   bool ativo;
   Jogador jogador[MAX_JOGADORES];
   Professor professor;
+  EstadoJogo estado_atual;
 
-  Jogo(uint8_t rodadas)
-    : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0), ativo(false) {
+
+  Jogo()
+    : resposta_certa(BOTAO_INVALIDO), ativo(false), estado_atual(LCD_MENU_INICIAL) {
   }
   void iniciar_jogo();
-  Botao definir_resposta_certa();
   void finalizarJogo();
-  void reiniciar_jogadores();
+  Botao definir_resposta_certa();
   void verificar_botoes_jogadores();
+  void reiniciar_jogadores();
   void pontuar_jogadores(Botao, uint8_t);
   void redefinir_respostas_jogadores();
 };
@@ -138,7 +153,7 @@ uint8_t Jogador::obterEndereco() {
 }
 
 unsigned long Jogador::obterTempoAnterior() {
-  this->tempo_anterior_;
+  return this->tempo_anterior_;
 }
 
 void Jogador::definirTempoAnterior(unsigned long tempo) {
@@ -150,32 +165,7 @@ void Jogador::definirPontuacao(uint8_t ponto) {
 }
 
 void Jogador::verificarBotaoPressionado() {
-  uint8_t botao_pressionado_atual = Util::lerBotao(this->obterEndereco(), 1, 0b11111111);
 
-  if (botao_pressionado_atual != BOTAO_INVALIDO && millis() - this->obterTempoAnterior() > 50) {
-    this->definirTempoAnterior(millis());
-    switch (botao_pressionado_atual) {
-      case BOTAO_A:
-        Serial.println("O jogador apertou a opcao 'A'");
-        this->definirResposta(BOTAO_A);
-        break;
-      case BOTAO_B:
-        Serial.println("O jogador apertou a opcao 'B'");
-        this->definirResposta(BOTAO_B);
-        break;
-      case BOTAO_C:
-        Serial.println("O jogador apertou a opcao 'C'");
-        this->definirResposta(BOTAO_C);
-        break;
-      case BOTAO_D:
-        Serial.println("O jogador apertou a opcao 'D'");
-        this->definirResposta(BOTAO_D);
-        break;
-      default:
-        this->definirResposta(BOTAO_INVALIDO);
-        break;
-    }
-  }
 }
 
 void Jogador::marcar_ponto(uint8_t ponto) {
@@ -185,25 +175,11 @@ void Jogador::marcar_ponto(uint8_t ponto) {
 
 void Jogador::reiniciar_jogador() {
   Util::escreverDado(this->obterEndereco(), 0b11111111);
-  this->definirResposta(BOTAO_INVALIDO);
 }
-
 Botao Jogo::definir_resposta_certa() {
-    Botao botao_pressionado = BOTAO_INVALIDO;
-
-    // Limpa eventos pendentes (ex.: ainda segurando Start)
-    while (this->professor.verificarBotaoPressionado() != BOTAO_INVALIDO) {
-        // fica até não haver evento
-    }
-
-    // Aguarda a primeira escolha válida (A/B/C/D) por borda
-    while (true) {
-        botao_pressionado = this->professor.verificarBotaoPressionado();
-        if (botao_pressionado != BOTAO_INVALIDO) {
-            return botao_pressionado;
-        }
-    }
+  return BOTAO_INVALIDO;
 }
+
 
 
 void Jogo::redefinir_respostas_jogadores() {
@@ -228,7 +204,6 @@ void Jogo::verificar_botoes_jogadores() {
     if (this->jogador[0].obterResposta()) {
       continuar = false;
     }
-    // TODO tempo de resposta dos usuarios
   }
 }
 
@@ -239,9 +214,8 @@ void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
     }
   }
 }
-
 void Jogo::iniciar_jogo() {
-  Serial.print("Jogo inicado!");
+  Serial.print("Iniciou o jogo!");
   this->ativo = true;
 }
 
@@ -256,34 +230,17 @@ char Professor::obterNome(){
     return this->nome_;
 }
 
-Botao Professor::verificarBotaoPressionado()
-{
-    uint8_t atual = Util::lerBotao(this->obterEndereco(), 1, 0b11111111);
-
-    static uint8_t anterior = BOTAO_INVALIDO;        // último botão lido
-    static unsigned long t_ultima_mudanca = 0;       // para debounce
-    unsigned long agora = millis();
-
-    // Se não mudou, não há evento
-    if (atual == anterior) return BOTAO_INVALIDO;
-
-    // Mudou: aplica debounce (~50 ms)
-    if (agora - t_ultima_mudanca < 50) return BOTAO_INVALIDO;
-
-    // Confirma a mudança
-    t_ultima_mudanca = agora;
-    anterior = atual;
-
-    // Dispara evento **só** na transição solto -> pressionado
-    if (atual != BOTAO_INVALIDO) {
-        switch (atual) {
-            case BOTAO_A: Serial.println("O Professor apertou a opcao 'A'"); return BOTAO_A;
-            case BOTAO_B: Serial.println("O Professor apertou a opcao 'B'"); return BOTAO_B;
-            case BOTAO_C: Serial.println("O Professor apertou a opcao 'C'"); return BOTAO_C;
-            case BOTAO_D: Serial.println("O Professor apertou a opcao 'D'"); return BOTAO_D;
-        }
+Botao Professor::verificarBotaoPressionado() {
+    uint8_t botao_pressionado = Util::lerBotao(this->obterEndereco(), 1, MASCARA_BOTOES);
+    
+    switch (botao_pressionado) {
+        case BOTAO_A: Serial.println("O Professor apertou a opção 'A'"); return BOTAO_A;
+        case BOTAO_B: Serial.println("O Professor apertou a opção 'B'"); return BOTAO_B;
+        case BOTAO_C: Serial.println("O Professor apertou a opção 'C'"); return BOTAO_C;
+        case BOTAO_D: Serial.println("O Professor apertou a opção 'D'"); return BOTAO_D;
     }
-    return BOTAO_INVALIDO; // transição pressionado->solto não gera evento
+
+    return BOTAO_INVALIDO;
 }
 
 void Util::escreverDado(uint8_t device, uint8_t byte)
@@ -303,20 +260,35 @@ uint8_t Util::lerBotao(uint8_t device, uint8_t count, uint8_t mask)
     return byte;
 }
 
+bool Util::botaoSegurado(uint8_t device, uint8_t botao, unsigned long tempoSegurar) {
+    static unsigned long tempoInicio = 0;
+    uint8_t botaoPressionado = lerBotao(device, 1, MASCARA_BOTOES);
+
+    if (botaoPressionado == botao) {
+        if (tempoInicio == 0) tempoInicio = millis();
+        if (millis() - tempoInicio >= tempoSegurar) {
+            tempoInicio = 0;
+            return true;
+        }
+    } else {
+        tempoInicio = 0;
+    }
+    return false;
+}
+
 Adafruit_LiquidCrystal lcd(0x27);
+Jogo jogo;
+unsigned long t_ultima_mudanca = 0;    
+Botao botaoPressionado = BOTAO_INVALIDO;
+Botao botaoAnterior = BOTAO_INVALIDO;
 
-unsigned long tempo_segundos = 0;
 
-Jogo jogo(3);
-unsigned long tempo_anterior = 0;
 
 void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Configurado.");
-
+ 
+  
   jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
   jogo.jogador[1] = Jogador('B', PLAYER_B);
@@ -324,72 +296,91 @@ void setup() {
   jogo.jogador[3] = Jogador('D', PLAYER_D);
   jogo.jogador[4] = Jogador('E', PLAYER_E);
   jogo.jogador[5] = Jogador('F', PLAYER_F);
-
+  
   jogo.reiniciar_jogadores();
-
+  
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Jogo iniciado!");
+  lcd.print("Configurado.");
+
 }
 
 void loop() {
-  if (jogo.ativo) {
-    Serial.print("Definindo resposta...");
-    lcd.clear();
-    lcd.setCursor(5, 0);
-    lcd.print("Gerando");
-    lcd.setCursor(3, 1);
-    lcd.print("Pergunta...");
-    Botao resposta_certa = jogo.definir_resposta_certa();
+Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
 
+  if ( millis() - t_ultima_mudanca > DEBOUNCE) {
+    t_ultima_mudanca = millis();
+    switch (jogo.estado_atual) {
+      case LCD_MENU_INICIAL:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("A - Iniciar");
+        lcd.setCursor(0, 1);
+        lcd.print("B - Finalizar");
+        jogo.estado_atual = ACAO_MENU_INICIAL;
+      break;
 
+      case ACAO_MENU_INICIAL:
+        if (botaoPressionado == BOTAO_A) {
+          Serial.println("Iniciar jogo pressionado.");
+          botaoAnterior = BOTAO_A;
+          jogo.estado_atual = LCD_DEF_RESPOSTA;
+        }else if (botaoPressionado == BOTAO_B) {
+          Serial.println("Finalizar jogo pressionado.");
+          jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+        }
+      break;
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Iniciando em...");
-    lcd.setCursor(0, 4);
+      case LCD_DEF_RESPOSTA:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Definir Resposta:");
+        lcd.setCursor(0, 1);
+        lcd.print("A/B/C/D");
+        jogo.estado_atual = ACAO_DEF_RESPOSTA;
+      break;
 
-    for (uint8_t i = 3; i > 0; i--) {
-      lcd.setCursor(5, 4);
-      lcd.print(i);
-      lcd.print(" segundos");
-      delay(3 * 1000);
-    }
-    lcd.clear();
-    lcd.setCursor(6, 0);
-    lcd.print("Vai!");
-
-
-
-    jogo.verificar_botoes_jogadores();
-    jogo.pontuar_jogadores(resposta_certa, 1);
-    jogo.redefinir_respostas_jogadores();
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("PLA|");
-    lcd.setCursor(0, 1);
-    lcd.print("CAR|");
-
-    uint8_t index_jogador = 0;
-    for (uint8_t i = 5; i <= 15 && index_jogador < 6; i += 2) {
-      lcd.setCursor(i, 0);  // Coluna, Linha
-      lcd.print(jogo.jogador[index_jogador].obterNome());
-      lcd.setCursor(i, 1);  // Coluna, Linha
-      lcd.print(jogo.jogador[index_jogador].obterPontuacao());
-      index_jogador++;
-    }
-    jogo.finalizarJogo();
-  }
-  unsigned long tempo_atual = millis();
-  Botao botao_pressionado = jogo.professor.verificarBotaoPressionado();
-
-  if (botao_pressionado == BOTAO_A && tempo_atual - tempo_anterior >= 1000) {
-    tempo_anterior = tempo_atual;
-    tempo_segundos++;
-    if (tempo_segundos >= 2) {
-      jogo.iniciar_jogo();
-      tempo_segundos = 0;
+      case ACAO_DEF_RESPOSTA:
+        if (botaoPressionado != botaoAnterior) {
+          botaoAnterior = botaoPressionado;
+          if(botaoPressionado != BOTAO_INVALIDO){
+            Serial.print("Resposta correta definida: ");
+            Serial.println(botaoPressionado);
+            jogo.estado_atual = LCD_AGUARDAR_RESPOSTAS;
+          }
+        }
+      break;
+      case LCD_AGUARDAR_RESPOSTAS:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Aguardando jog...");
+        jogo.estado_atual = ACAO_AGUARDAR_RESPOSTAS;
+      break;
+      case ACAO_AGUARDAR_RESPOSTAS:
+        //jogo.verificar_botoes_jogadores();
+        jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+      break;
+      case LCD_MOSTRAR_RESULTADOS:
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Mostrando result");
+        // Aqui você pode percorrer os jogadores e mostrar pontuação
+        jogo.estado_atual = ACAO_MOSTRAR_RESULTADOS;
+      break;
+      case ACAO_MOSTRAR_RESULTADOS:
+        // Por exemplo, pontuar jogadores
+        jogo.pontuar_jogadores(jogo.resposta_certa, 1);
+        jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+      break;
+      case ACAO_ENCERRAR_JOGO:
+        Serial.println("Jogo encerrado.");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Jogo encerrado");
+        jogo.finalizarJogo();
+        // Volta para menu inicial
+        jogo.estado_atual = LCD_MENU_INICIAL;
+      break;
     }
   }
 }

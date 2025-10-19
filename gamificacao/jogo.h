@@ -6,21 +6,21 @@
 #include "util.h"
 class Jogo {
 public:
-  uint8_t rodadas;
-  uint8_t rodadas_restantes;
-  uint8_t resposta_certa;
+  Botao resposta_certa;
   bool ativo;
   Jogador jogador[MAX_JOGADORES];
   Professor professor;
+  EstadoJogo estado_atual;
 
-  Jogo(uint8_t rodadas)
-    : rodadas(rodadas), rodadas_restantes(rodadas), resposta_certa(0x0), ativo(false) {
+
+  Jogo()
+    : resposta_certa(BOTAO_INVALIDO), ativo(false), estado_atual(LCD_MENU_INICIAL) {
   }
   void iniciar_jogo();
-  Botao definir_resposta_certa();
   void finalizarJogo();
-  void reiniciar_jogadores();
+  Botao definir_resposta_certa();
   void verificar_botoes_jogadores();
+  void reiniciar_jogadores();
   void pontuar_jogadores(Botao, uint8_t);
   void redefinir_respostas_jogadores();
 };

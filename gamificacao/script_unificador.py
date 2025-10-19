@@ -34,7 +34,7 @@ def escrever_arquivo(includes_filtrados, codigo_filtrado):
 
 def main():
     lista_arquivos = ["header.h","util.h", "jogador.h","professor.h", "jogo.h", "jogador.cpp", "jogo.cpp", "professor.cpp", "util.cpp", "gamificacao.ino"]
-    lista_palavras_proibidas = ["#endif","HEADER_H", "JOGADOR_H", "JOGO_H", "PROFESSOR_H", "UTIL_H"]
+    lista_palavras_proibidas = ["#endif","HEADER_H", "JOGADOR_H", "JOGO_H", "PROFESSOR_H", "UTIL_H", "<Arduino.h>"]
 
     lista_includes, lista_codigo = extrair_codigo(lista_arquivos)
     includes_filtrados = filtrar_codigo(lista_includes, lista_arquivos)

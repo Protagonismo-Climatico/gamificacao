@@ -1,22 +1,9 @@
 #include "./jogo.h"
 
-
 Botao Jogo::definir_resposta_certa() {
-    Botao botao_pressionado = BOTAO_INVALIDO;
-
-    // Limpa eventos pendentes (ex.: ainda segurando Start)
-    while (this->professor.verificarBotaoPressionado() != BOTAO_INVALIDO) {
-        // fica até não haver evento
-    }
-
-    // Aguarda a primeira escolha válida (A/B/C/D) por borda
-    while (true) {
-        botao_pressionado = this->professor.verificarBotaoPressionado();
-        if (botao_pressionado != BOTAO_INVALIDO) {
-            return botao_pressionado;
-        }
-    }
+  return BOTAO_INVALIDO;
 }
+
 
 
 void Jogo::redefinir_respostas_jogadores() {
@@ -41,7 +28,6 @@ void Jogo::verificar_botoes_jogadores() {
     if (this->jogador[0].obterResposta()) {
       continuar = false;
     }
-    // TODO tempo de resposta dos usuarios
   }
 }
 
@@ -52,9 +38,8 @@ void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
     }
   }
 }
-
 void Jogo::iniciar_jogo() {
-  Serial.print("Jogo inicado!");
+  Serial.print("Iniciou o jogo!");
   this->ativo = true;
 }
 
