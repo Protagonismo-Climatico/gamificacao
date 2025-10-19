@@ -1,6 +1,6 @@
 # Projeto de Extensão — Sistema Gamificado de Ensino com Arduino
 
-Projeto de extensão da **Universidade de Brasília (UnB)**, coordenado pelo **Prof. Dr. Rafael Shayani**, do **Departamento de Engenharia Elétrica**.
+Projeto de extensão da **Universidade de Brasília (UnB)**, coordenado pelo **Prof. João Luiz Azevedo de Carvalho**, do **Departamento de Engenharia Elétrica**.
 
 Este projeto tem como objetivo a implementação de um sistema **gamificado de ensino** em escolas públicas do **Distrito Federal**, utilizando placas **Arduino** como ferramenta de apoio pedagógico.
 
