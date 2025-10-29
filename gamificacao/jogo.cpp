@@ -1,14 +1,15 @@
 #include "./jogo.h"
 
-Botao Jogo::definir_resposta_certa() {
-  return BOTAO_INVALIDO;
+Botao Jogo::definir_resposta_certa(Botao resposta) {
+  Serial.println(resposta);
+  return this->resposta_certa = resposta;
 }
 
 
 
 void Jogo::redefinir_respostas_jogadores() {
   for (int i = 0; i < MAX_JOGADORES; i++) {
-    this->jogador[i].definirResposta(0x0);
+    this->jogador[i].definirResposta(BOTAO_INVALIDO);
   }
 }
 
@@ -19,16 +20,15 @@ void Jogo::reiniciar_jogadores() {
 }
 
 void Jogo::verificar_botoes_jogadores() {
-  bool continuar = true;
-
-  while (continuar) {
+    this->todos_jogadores_responderam = true;
     for (int i = 0; i < MAX_JOGADORES; i++) {
-      this->jogador[i].verificarBotaoPressionado();
+        if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
+            jogador[i].verificarBotaoPressionado();
+            if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
+                this->todos_jogadores_responderam = false;
+            }
+        }
     }
-    if (this->jogador[0].obterResposta()) {
-      continuar = false;
-    }
-  }
 }
 
 void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {

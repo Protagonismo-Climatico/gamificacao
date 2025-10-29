@@ -4,6 +4,8 @@
 Adafruit_LiquidCrystal lcd(0x27);
 Jogo jogo;
 unsigned long t_ultima_mudanca = 0;    
+unsigned long t_inicio_resposta = 0;
+
 Botao botaoPressionado = BOTAO_INVALIDO;
 Botao botaoAnterior = BOTAO_INVALIDO;
 
@@ -12,7 +14,6 @@ Botao botaoAnterior = BOTAO_INVALIDO;
 void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
- 
   
   jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
@@ -27,11 +28,10 @@ void setup() {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Configurado.");
-
 }
 
 void loop() {
-Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
+   botaoPressionado = jogo.professor.verificarBotaoPressionado();
 
   if (millis() - t_ultima_mudanca > DEBOUNCE) {
     t_ultima_mudanca = millis();
@@ -69,6 +69,7 @@ Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
         if (botaoPressionado != botaoAnterior) {
           botaoAnterior = botaoPressionado;
           if(botaoPressionado != BOTAO_INVALIDO){
+            jogo.definir_resposta_certa(botaoPressionado);
             Serial.print("Resposta correta definida: ");
             jogo.estado_atual = LCD_AGUARDAR_RESPOSTAS;
           }
@@ -81,18 +82,29 @@ Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
         jogo.estado_atual = ACAO_AGUARDAR_RESPOSTAS;
       break;
       case ACAO_AGUARDAR_RESPOSTAS:
-        //jogo.verificar_botoes_jogadores();
-        jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+        if (t_inicio_resposta == 0) {
+         t_inicio_resposta = millis();
+        }
+
+        jogo.verificar_botoes_jogadores();
+
+        if (millis() - t_inicio_resposta >= TEMPO_LIMITE) {
+          jogo.tempo_esgotado = true;
+        }
+
+        if (jogo.todos_jogadores_responderam || jogo.tempo_esgotado) {
+          jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+          t_inicio_resposta = 0;
+          jogo.tempo_esgotado = false; 
+        }
       break;
       case LCD_MOSTRAR_RESULTADOS:
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("Mostrando result");
-        // Aqui você pode percorrer os jogadores e mostrar pontuação
         jogo.estado_atual = ACAO_MOSTRAR_RESULTADOS;
       break;
       case ACAO_MOSTRAR_RESULTADOS:
-        // Por exemplo, pontuar jogadores
         jogo.pontuar_jogadores(jogo.resposta_certa, 1);
         jogo.estado_atual = ACAO_ENCERRAR_JOGO;
       break;
@@ -102,7 +114,6 @@ Botao botaoPressionado = jogo.professor.verificarBotaoPressionado();
         lcd.setCursor(0,0);
         lcd.print("Jogo encerrado");
         jogo.finalizarJogo();
-        // Volta para menu inicial
         jogo.estado_atual = LCD_MENU_INICIAL;
       break;
     }

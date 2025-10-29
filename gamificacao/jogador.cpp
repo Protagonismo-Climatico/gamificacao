@@ -9,11 +9,12 @@ uint8_t Jogador::obterPontuacao() {
 }
 
 
-uint8_t Jogador::obterResposta() {
+Botao Jogador::obterResposta() {
   return this->resposta_;
 }
 
-void Jogador::definirResposta(uint8_t resposta) {
+void Jogador::definirResposta(Botao resposta) {
+  Serial.println(resposta);
   this->resposta_ = resposta;
 }
 uint8_t Jogador::obterEndereco() {
@@ -33,12 +34,21 @@ void Jogador::definirPontuacao(uint8_t ponto) {
 }
 
 void Jogador::verificarBotaoPressionado() {
+    uint8_t botao = Util::lerBotao(this->obterEndereco(), 1, MASCARA_BOTOES);
 
+    switch (botao) {
+        case BOTAO_A: this->definirResposta(BOTAO_A); break;
+        case BOTAO_B: this->definirResposta(BOTAO_B); break;
+        case BOTAO_C: this->definirResposta(BOTAO_C); break;
+        case BOTAO_D: this->definirResposta(BOTAO_D); break;
+        default: break; 
+    }
 }
+
 
 void Jogador::marcar_ponto(uint8_t ponto) {
   uint8_t pontuacao = this->obterPontuacao() + ponto;
-  this->definirPontuacao(ponto);
+  this->definirPontuacao(pontuacao);
 }
 
 void Jogador::reiniciar_jogador() {

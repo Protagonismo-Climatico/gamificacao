@@ -6,6 +6,8 @@
 #include <Arduino.h>
 #define MAX_JOGADORES 6
 #define DEBOUNCE  50
+#define TEMPO_LIMITE  10000
+
 
 enum EnderecosI2C
 {

@@ -11,14 +11,16 @@ public:
   Jogador jogador[MAX_JOGADORES];
   Professor professor;
   EstadoJogo estado_atual;
+  bool todos_jogadores_responderam;
+  bool tempo_esgotado;
 
 
   Jogo()
-    : resposta_certa(BOTAO_INVALIDO), ativo(false), estado_atual(LCD_MENU_INICIAL) {
+    : resposta_certa(BOTAO_INVALIDO), ativo(false), estado_atual(LCD_MENU_INICIAL), todos_jogadores_responderam(false),tempo_esgotado(false){
   }
   void iniciar_jogo();
   void finalizarJogo();
-  Botao definir_resposta_certa();
+  Botao definir_resposta_certa(Botao);
   void verificar_botoes_jogadores();
   void reiniciar_jogadores();
   void pontuar_jogadores(Botao, uint8_t);
