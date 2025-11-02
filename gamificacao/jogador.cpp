@@ -1,36 +1,48 @@
 #include "jogador.h"
+#include "util.h"
+
+Jogador::Jogador(char nome, uint8_t endereco)
+    : nome_(nome), pontuacao_(0), resposta_(BOTAO_INVALIDO), 
+      endereco_(endereco), tempo_anterior_(0) {}
+
+Jogador::Jogador() 
+    : nome_(' '), pontuacao_(0), resposta_(BOTAO_INVALIDO), 
+      endereco_(0), tempo_anterior_(0) {}
 
 char Jogador::obterNome() {
-  return this->nome_;
+    return this->nome_;
 }
 
 uint8_t Jogador::obterPontuacao() {
-  return this->pontuacao_;
+    return this->pontuacao_;
 }
 
-
 Botao Jogador::obterResposta() {
-  return this->resposta_;
+    return this->resposta_;
 }
 
 void Jogador::definirResposta(Botao resposta) {
-  Serial.println(resposta);
-  this->resposta_ = resposta;
+    Serial.print("Jogador ");
+    Serial.print(this->nome_);
+    Serial.print(" respondeu: ");
+    Serial.println(resposta);
+    this->resposta_ = resposta;
 }
+
 uint8_t Jogador::obterEndereco() {
-  return this->endereco_;
+    return this->endereco_;
 }
 
 unsigned long Jogador::obterTempoAnterior() {
-  return this->tempo_anterior_;
+    return this->tempo_anterior_;
 }
 
 void Jogador::definirTempoAnterior(unsigned long tempo) {
-  this->tempo_anterior_ = tempo;
+    this->tempo_anterior_ = tempo;
 }
 
 void Jogador::definirPontuacao(uint8_t ponto) {
-  this->pontuacao_ = ponto;
+    this->pontuacao_ = ponto;
 }
 
 void Jogador::verificarBotaoPressionado() {
@@ -41,16 +53,15 @@ void Jogador::verificarBotaoPressionado() {
         case BOTAO_B: this->definirResposta(BOTAO_B); break;
         case BOTAO_C: this->definirResposta(BOTAO_C); break;
         case BOTAO_D: this->definirResposta(BOTAO_D); break;
-        default: break; 
+        default: break;
     }
 }
 
-
 void Jogador::marcar_ponto(uint8_t ponto) {
-  uint8_t pontuacao = this->obterPontuacao() + ponto;
-  this->definirPontuacao(pontuacao);
+    uint8_t pontuacao = this->obterPontuacao() + ponto;
+    this->definirPontuacao(pontuacao);
 }
 
 void Jogador::reiniciar_jogador() {
-  Util::escreverDado(this->obterEndereco(), 0b11111111);
+    Util::escreverDado(this->obterEndereco(), 0b11111111);
 }

@@ -1,0 +1,532 @@
+#include <Wire.h>
+#include "Adafruit_LiquidCrystal.h"
+
+// ========== CONFIGURAÇÕES GERAIS ==========
+#define MAX_JOGADORES 5
+#define DEBOUNCE 50
+#define TEMPO_LIMITE 10000
+#define MAX_ROUNDS 5  // Quantidade de rounds
+
+// ========== ENDEREÇOS I2C DOS CONTROLES ==========
+enum EnderecosI2C {
+    PLAYER_A = 0x20,
+    PLAYER_B = 0x21,
+    PLAYER_C = 0x22,
+    PLAYER_D = 0x23,
+    PLAYER_E = 0x24,
+    PROFESSOR = 0x26
+};
+
+// ========== BOTÕES ==========
+enum Botao {
+    BOTAO_A = 0b11110111,
+    BOTAO_B = 0b11111011,
+    BOTAO_C = 0b11111101,
+    BOTAO_D = 0b11111110,
+    BOTAO_INVALIDO = 0b11111111
+};
+
+// ========== MÁSCARAS ==========
+enum Mascara {
+    MASCARA_BOTOES = 0b11111111
+};
+
+// ========== ESTADOS DO JOGO ==========
+enum EstadoJogo {
+    LCD_MENU_INICIAL,
+    ACAO_MENU_INICIAL,
+    LCD_DEF_RESPOSTA,
+    ACAO_DEF_RESPOSTA,
+    LCD_AGUARDAR_RESPOSTAS,
+    ACAO_AGUARDAR_RESPOSTAS,
+    LCD_MOSTRAR_RESULTADOS,
+    ACAO_MOSTRAR_RESULTADOS,
+    LCD_PLACAR_FINAL,      // NOVO
+    ACAO_PLACAR_FINAL,     // NOVO
+    ACAO_ENCERRAR_JOGO
+};
+
+// ========== CLASSE UTIL ==========
+class Util {
+public:
+    Util() {}
+    static bool botaoSegurado(uint8_t device, uint8_t botao, unsigned long tempoSegurar);
+    static void escreverDado(uint8_t device, uint8_t byte);
+    static uint8_t lerBotao(uint8_t device, uint8_t count, uint8_t mask);
+};
+
+// ========== CLASSE JOGADOR ==========
+class Jogador {
+private:
+    char nome_;
+    uint8_t pontuacao_;
+    Botao resposta_;
+    uint8_t endereco_;
+    unsigned long tempo_anterior_;
+
+public:
+    Jogador(char nome, uint8_t endereco)
+        : nome_(nome), pontuacao_(0), resposta_(BOTAO_INVALIDO), 
+          endereco_(endereco), tempo_anterior_(0) {}
+    
+    Jogador() 
+        : nome_(' '), pontuacao_(0), resposta_(BOTAO_INVALIDO), 
+          endereco_(0), tempo_anterior_(0) {}
+
+    void verificarBotaoPressionado();
+    void marcar_ponto(uint8_t ponto);
+    void reiniciar_jogador();
+    
+    char obterNome();
+    uint8_t obterPontuacao();
+    void definirPontuacao(uint8_t ponto);
+    Botao obterResposta();
+    void definirResposta(Botao resposta);
+    uint8_t obterEndereco();
+    unsigned long obterTempoAnterior();
+    void definirTempoAnterior(unsigned long tempo);
+};
+
+// ========== CLASSE PROFESSOR ==========
+class Professor {
+private:
+    uint8_t endereco_;
+    char nome_;
+
+public:
+    Professor(char nome, uint8_t endereco)
+        : nome_(nome), endereco_(endereco) {}
+    
+    Professor()
+        : nome_('P'), endereco_(0) {}
+
+    Botao verificarBotaoPressionado();
+    uint8_t obterEndereco();
+    char obterNome();
+};
+
+// ========== CLASSE JOGO ==========
+class Jogo {
+public:
+    Botao resposta_certa;
+    bool ativo;
+    Jogador jogador[MAX_JOGADORES];
+    Professor professor;
+    EstadoJogo estado_atual;
+    bool todos_jogadores_responderam;
+    bool tempo_esgotado;
+    int jogador_atual_resultado;
+    int round_atual;  // NOVO: contador de rounds
+
+    Jogo()
+        : resposta_certa(BOTAO_INVALIDO), ativo(false), 
+          estado_atual(LCD_MENU_INICIAL), 
+          todos_jogadores_responderam(false), 
+          tempo_esgotado(false), 
+          jogador_atual_resultado(0),
+          round_atual(0) {}
+
+    void iniciar_jogo();
+    void finalizarJogo();
+    Botao definir_resposta_certa(Botao);
+    void verificar_botoes_jogadores();
+    void reiniciar_jogadores();
+    void pontuar_jogadores(Botao, uint8_t);
+    void redefinir_respostas_jogadores();
+    void ordenar_jogadores_por_pontuacao();  // NOVO
+};
+
+// ========== IMPLEMENTAÇÃO DOS MÉTODOS DO JOGADOR ==========
+
+char Jogador::obterNome() {
+    return this->nome_;
+}
+
+uint8_t Jogador::obterPontuacao() {
+    return this->pontuacao_;
+}
+
+Botao Jogador::obterResposta() {
+    return this->resposta_;
+}
+
+void Jogador::definirResposta(Botao resposta) {
+    Serial.print("Jogador ");
+    Serial.print(this->nome_);
+    Serial.print(" respondeu: ");
+    Serial.println(resposta);
+    this->resposta_ = resposta;
+}
+
+uint8_t Jogador::obterEndereco() {
+    return this->endereco_;
+}
+
+unsigned long Jogador::obterTempoAnterior() {
+    return this->tempo_anterior_;
+}
+
+void Jogador::definirTempoAnterior(unsigned long tempo) {
+    this->tempo_anterior_ = tempo;
+}
+
+void Jogador::definirPontuacao(uint8_t ponto) {
+    this->pontuacao_ = ponto;
+}
+
+void Jogador::verificarBotaoPressionado() {
+    uint8_t botao = Util::lerBotao(this->obterEndereco(), 1, MASCARA_BOTOES);
+
+    switch (botao) {
+        case BOTAO_A: this->definirResposta(BOTAO_A); break;
+        case BOTAO_B: this->definirResposta(BOTAO_B); break;
+        case BOTAO_C: this->definirResposta(BOTAO_C); break;
+        case BOTAO_D: this->definirResposta(BOTAO_D); break;
+        default: break;
+    }
+}
+
+void Jogador::marcar_ponto(uint8_t ponto) {
+    uint8_t pontuacao = this->obterPontuacao() + ponto;
+    this->definirPontuacao(pontuacao);
+}
+
+void Jogador::reiniciar_jogador() {
+    Util::escreverDado(this->obterEndereco(), 0b11111111);
+}
+
+// ========== IMPLEMENTAÇÃO DOS MÉTODOS DO PROFESSOR ==========
+
+uint8_t Professor::obterEndereco() {
+    return this->endereco_;
+}
+
+char Professor::obterNome() {
+    return this->nome_;
+}
+
+Botao Professor::verificarBotaoPressionado() {
+    uint8_t botao_pressionado = Util::lerBotao(this->obterEndereco(), 1, MASCARA_BOTOES);
+    
+    switch (botao_pressionado) {
+        case BOTAO_A: return BOTAO_A;
+        case BOTAO_B: return BOTAO_B;
+        case BOTAO_C: return BOTAO_C;
+        case BOTAO_D: return BOTAO_D;
+    }
+
+    return BOTAO_INVALIDO;
+}
+
+// ========== IMPLEMENTAÇÃO DOS MÉTODOS DO JOGO ==========
+
+Botao Jogo::definir_resposta_certa(Botao resposta) {
+    Serial.print("Resposta correta definida: ");
+    Serial.println(resposta);
+    return this->resposta_certa = resposta;
+}
+
+void Jogo::redefinir_respostas_jogadores() {
+    for (int i = 0; i < MAX_JOGADORES; i++) {
+        this->jogador[i].definirResposta(BOTAO_INVALIDO);
+    }
+}
+
+void Jogo::reiniciar_jogadores() {
+    for (int i = 0; i < MAX_JOGADORES; i++) {
+        jogador[i].reiniciar_jogador();
+    }
+}
+
+void Jogo::verificar_botoes_jogadores() {
+    this->todos_jogadores_responderam = true;
+    
+    for (int i = 0; i < MAX_JOGADORES; i++) {
+        if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
+            jogador[i].verificarBotaoPressionado();
+            
+            if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
+                this->todos_jogadores_responderam = false;
+            }
+        }
+    }
+}
+
+void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
+    for (uint8_t i = 0; i < MAX_JOGADORES; i++) {
+        if (this->jogador[i].obterResposta() == resposta) {
+            this->jogador[i].marcar_ponto(pontos);
+        }
+    }
+}
+
+// NOVO: Ordena jogadores por pontuação
+void Jogo::ordenar_jogadores_por_pontuacao() {
+    for (int i = 0; i < MAX_JOGADORES - 1; i++) {
+        for (int j = 0; j < MAX_JOGADORES - i - 1; j++) {
+            if (jogador[j].obterPontuacao() < jogador[j + 1].obterPontuacao()) {
+                Jogador temp = jogador[j];
+                jogador[j] = jogador[j + 1];
+                jogador[j + 1] = temp;
+            }
+        }
+    }
+}
+
+void Jogo::iniciar_jogo() {
+    Serial.println("Iniciou o jogo!");
+    this->ativo = true;
+    this->round_atual = 1;  // NOVO: começa no round 1
+    
+    // NOVO: zera pontuações
+    for (int i = 0; i < MAX_JOGADORES; i++) {
+        jogador[i].definirPontuacao(0);
+    }
+}
+
+void Jogo::finalizarJogo() {
+    Serial.println("Acabou o jogo!");
+    this->ativo = false;
+}
+
+// ========== IMPLEMENTAÇÃO DOS MÉTODOS DA UTIL ==========
+
+void Util::escreverDado(uint8_t device, uint8_t byte) {
+    Wire.beginTransmission(device);
+    Wire.write(byte);
+    Wire.endTransmission();
+    delay(1);
+}
+
+uint8_t Util::lerBotao(uint8_t device, uint8_t count, uint8_t mask) {
+    Wire.requestFrom(device, count);
+    uint8_t byte = Wire.read();
+    byte = byte & mask;
+    return byte;
+}
+
+bool Util::botaoSegurado(uint8_t device, uint8_t botao, unsigned long tempoSegurar) {
+    static unsigned long tempoInicio = 0;
+    uint8_t botaoPressionado = lerBotao(device, 1, MASCARA_BOTOES);
+
+    if (botaoPressionado == botao) {
+        if (tempoInicio == 0) tempoInicio = millis();
+        if (millis() - tempoInicio >= tempoSegurar) {
+            tempoInicio = 0;
+            return true;
+        }
+    } else {
+        tempoInicio = 0;
+    }
+    return false;
+}
+
+// ========== VARIÁVEIS GLOBAIS ==========
+Adafruit_LiquidCrystal lcd(0x27);
+Jogo jogo;
+
+unsigned long t_ultima_mudanca = 0;
+unsigned long t_inicio_resposta = 0;
+unsigned long t_mostra_resultado = 0;
+unsigned long t_placar_final = 0;  // NOVO
+
+Botao botaoPressionado = BOTAO_INVALIDO;
+Botao botaoAnterior = BOTAO_INVALIDO;
+
+// ========== SETUP ==========
+void setup() {
+    Serial.begin(9600);
+    lcd.begin(16, 2);
+    
+    jogo.professor = Professor('P', PROFESSOR);
+    
+    jogo.jogador[0] = Jogador('A', PLAYER_A);
+    jogo.jogador[1] = Jogador('B', PLAYER_B);
+    jogo.jogador[2] = Jogador('C', PLAYER_C);
+    jogo.jogador[3] = Jogador('D', PLAYER_D);
+    jogo.jogador[4] = Jogador('E', PLAYER_E);
+    
+    jogo.reiniciar_jogadores();
+    
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bem vindo ao");
+    lcd.setCursor(0, 1);
+    lcd.print("Futuro Quizz!");
+    delay(2000);
+}
+
+// ========== LOOP PRINCIPAL ==========
+void loop() {
+    botaoPressionado = jogo.professor.verificarBotaoPressionado();
+
+    if (millis() - t_ultima_mudanca > DEBOUNCE) {
+        t_ultima_mudanca = millis();
+        
+        switch (jogo.estado_atual) {
+            
+            // ===== MENU INICIAL =====
+            case LCD_MENU_INICIAL:
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("A - Iniciar");
+                lcd.setCursor(0, 1);
+                lcd.print("B - Finalizar");
+                jogo.estado_atual = ACAO_MENU_INICIAL;
+                break;
+
+            case ACAO_MENU_INICIAL:
+                if (botaoPressionado == BOTAO_A) {
+                    Serial.println("Iniciar jogo pressionado.");
+                    botaoAnterior = BOTAO_A;
+                    jogo.iniciar_jogo();  // MUDOU: agora zera pontos e inicia rounds
+                    jogo.estado_atual = LCD_DEF_RESPOSTA;
+                } else if (botaoPressionado == BOTAO_B) {
+                    Serial.println("Finalizar jogo pressionado.");
+                    jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+                }
+                break;
+
+            // ===== DEFINIR RESPOSTA CORRETA =====
+            case LCD_DEF_RESPOSTA:
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Qual a resposta?");
+                lcd.setCursor(0, 1);
+                lcd.print("A / B / C / D");
+                jogo.estado_atual = ACAO_DEF_RESPOSTA;
+                break;
+
+            case ACAO_DEF_RESPOSTA:
+                if (botaoPressionado != botaoAnterior) {
+                    botaoAnterior = botaoPressionado;
+                    
+                    if (botaoPressionado != BOTAO_INVALIDO) {
+                        jogo.definir_resposta_certa(botaoPressionado);
+                        jogo.estado_atual = LCD_AGUARDAR_RESPOSTAS;
+                    }
+                }
+                break;
+
+            // ===== AGUARDAR RESPOSTAS DOS JOGADORES =====
+            case LCD_AGUARDAR_RESPOSTAS:
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Aguardando...");
+                lcd.setCursor(0, 1);
+                lcd.print("Jogadores");
+                
+                jogo.redefinir_respostas_jogadores();
+                jogo.estado_atual = ACAO_AGUARDAR_RESPOSTAS;
+                break;
+
+            case ACAO_AGUARDAR_RESPOSTAS:
+                if (t_inicio_resposta == 0) {
+                    t_inicio_resposta = millis();
+                }
+
+                jogo.verificar_botoes_jogadores();
+
+                if (millis() - t_inicio_resposta >= TEMPO_LIMITE) {
+                    jogo.tempo_esgotado = true;
+                }
+
+                if (jogo.todos_jogadores_responderam || jogo.tempo_esgotado) {
+                    jogo.pontuar_jogadores(jogo.resposta_certa, 1);
+                    jogo.jogador_atual_resultado = 0;
+                    jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+                    t_inicio_resposta = 0;
+                    t_mostra_resultado = 0;
+                    jogo.tempo_esgotado = false;
+                }
+                break;
+
+            // ===== MOSTRAR RESULTADOS =====
+            case LCD_MOSTRAR_RESULTADOS:
+                if (t_mostra_resultado == 0) {
+                    t_mostra_resultado = millis();
+                    
+                    int i = jogo.jogador_atual_resultado;
+                    bool acertou = (jogo.jogador[i].obterResposta() == jogo.resposta_certa);
+                    
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("Jogador ");
+                    lcd.print(jogo.jogador[i].obterNome());
+                    
+                    lcd.setCursor(0, 1);
+                    if (acertou) {
+                        lcd.print("Acertou! ");
+                    } else {
+                        lcd.print("Errou!   ");
+                    }
+                    lcd.print("Pts:");
+                    lcd.print(jogo.jogador[i].obterPontuacao());
+                }
+                
+                jogo.estado_atual = ACAO_MOSTRAR_RESULTADOS;
+                break;
+
+            case ACAO_MOSTRAR_RESULTADOS:
+                if (millis() - t_mostra_resultado >= 500) {
+                    jogo.jogador_atual_resultado++;
+                    
+                    if (jogo.jogador_atual_resultado >= MAX_JOGADORES) {
+                        // MUDOU: verifica se completou os 5 rounds
+                        if (jogo.round_atual >= MAX_ROUNDS) {
+                            // Acabaram os rounds - vai pro placar final
+                            jogo.estado_atual = LCD_PLACAR_FINAL;
+                        } else {
+                            // Próximo round
+                            jogo.round_atual++;
+                            jogo.estado_atual = LCD_DEF_RESPOSTA;
+                        }
+                    } else {
+                        t_mostra_resultado = 0;
+                        jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
+                    }
+                }
+                break;
+
+            // ===== PLACAR FINAL (NOVO) =====
+            case LCD_PLACAR_FINAL:
+                jogo.ordenar_jogadores_por_pontuacao();
+                
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("TOP 3:");
+                lcd.setCursor(0, 1);
+                
+                for (int i = 0; i < 3 && i < MAX_JOGADORES; i++) {
+                    lcd.print(jogo.jogador[i].obterNome());
+                    lcd.print(":");
+                    lcd.print(jogo.jogador[i].obterPontuacao());
+                    if (i < 2) lcd.print(" ");
+                }
+                
+                t_placar_final = millis();
+                jogo.estado_atual = ACAO_PLACAR_FINAL;
+                break;
+
+            case ACAO_PLACAR_FINAL:
+                if (millis() - t_placar_final >= 10000) {
+                    jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+                }
+                break;
+
+            // ===== ENCERRAR RODADA =====
+            case ACAO_ENCERRAR_JOGO:
+                Serial.println("Jogo encerrado.");
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Jogo");
+                lcd.setCursor(0, 1);
+                lcd.print("Encerrado!");
+                delay(2000);
+                
+                jogo.round_atual = 0;  // NOVO: reseta rounds
+                jogo.estado_atual = LCD_MENU_INICIAL;
+                break;
+        }
+    }
+}
