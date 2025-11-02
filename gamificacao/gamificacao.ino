@@ -1,7 +1,10 @@
 #include "jogo.h"
-#include "Adafruit_LiquidCrystal.h"
+#include <LiquidCrystal_I2C.h>
+#include "TCA9548.h"
 
-Adafruit_LiquidCrystal lcd(0x27);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+TCA9548 MP(0x70);
+
 Jogo jogo;
 unsigned long t_ultima_mudanca = 0;    
 unsigned long t_inicio_resposta = 0;
@@ -11,9 +14,20 @@ Botao botaoAnterior = BOTAO_INVALIDO;
 
 
 
-void setup() {
+void setup() {    
   Serial.begin(9600);
-  lcd.begin(16, 2);
+  delay(1000);
+  Serial.println("🔹 Iniciando setup...");
+
+  Wire.begin();
+  Serial.println("🔹 Wire iniciado.");
+
+  if (!MP.begin()) {
+    Serial.println("⚠ Erro ao inicializar o multiplexador!");
+  } else {
+    Serial.println("Multiplexador iniciado!");
+  }
+
   
   jogo.professor = Professor('P', PROFESSOR);
   jogo.jogador[0] = Jogador('A', PLAYER_A);
@@ -23,15 +37,33 @@ void setup() {
   jogo.jogador[4] = Jogador('E', PLAYER_E);
   jogo.jogador[5] = Jogador('F', PLAYER_F);
   
+  MP.selectChannel(0);
   jogo.reiniciar_jogadores();
   
+  lcd.init();      
+  lcd.backlight(); 
+
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Configurado.");
+  lcd.print("Professor !");
+
+  MP.selectChannel(1);
+    lcd.init();      
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Aluno !");
+
+  MP.selectChannel(0);
+
+
+
+  Serial.println("LCD inicializado!");
 }
 
 void loop() {
    botaoPressionado = jogo.professor.verificarBotaoPressionado();
+   Serial.println(botaoPressionado);
 
   if (millis() - t_ultima_mudanca > DEBOUNCE) {
     t_ultima_mudanca = millis();

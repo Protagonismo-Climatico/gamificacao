@@ -38,6 +38,7 @@ void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
     }
   }
 }
+
 void Jogo::iniciar_jogo() {
   Serial.print("Iniciou o jogo!");
   this->ativo = true;
