@@ -4,9 +4,11 @@
 
 #include <Wire.h>
 #include <Arduino.h>
-#define MAX_JOGADORES 6
+#define MAX_JOGADORES 1
 #define DEBOUNCE  50
 #define TEMPO_LIMITE  10000
+#define MAX_ROUNDS 2
+
 
 
 enum EnderecosI2C
@@ -37,8 +39,7 @@ enum Mascara
 
 
 
-enum EstadoJogo
-{
+enum EstadoJogo {
     LCD_MENU_INICIAL,
     ACAO_MENU_INICIAL,
     LCD_DEF_RESPOSTA,
@@ -47,6 +48,8 @@ enum EstadoJogo
     ACAO_AGUARDAR_RESPOSTAS,
     LCD_MOSTRAR_RESULTADOS,
     ACAO_MOSTRAR_RESULTADOS,
+    LCD_PLACAR_FINAL,
+    ACAO_PLACAR_FINAL,
     ACAO_ENCERRAR_JOGO
 };
 #endif

@@ -13,6 +13,8 @@ public:
   EstadoJogo estado_atual;
   bool todos_jogadores_responderam;
   bool tempo_esgotado;
+    int jogador_atual_resultado;
+    int round_atual;
 
 
   Jogo()

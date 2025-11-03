@@ -14,7 +14,6 @@ Botao Jogador::obterResposta() {
 }
 
 void Jogador::definirResposta(Botao resposta) {
-  Serial.println(resposta);
   this->resposta_ = resposta;
 }
 uint8_t Jogador::obterEndereco() {

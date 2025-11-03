@@ -5,8 +5,6 @@ Botao Jogo::definir_resposta_certa(Botao resposta) {
   return this->resposta_certa = resposta;
 }
 
-
-
 void Jogo::redefinir_respostas_jogadores() {
   for (int i = 0; i < MAX_JOGADORES; i++) {
     this->jogador[i].definirResposta(BOTAO_INVALIDO);
@@ -15,7 +13,8 @@ void Jogo::redefinir_respostas_jogadores() {
 
 void Jogo::reiniciar_jogadores() {
   for (int i = 0; i < MAX_JOGADORES; i++) {
-    jogador[i].reiniciar_jogador();
+    jogador[i].definirPontuacao(0);
+    
   }
 }
 
