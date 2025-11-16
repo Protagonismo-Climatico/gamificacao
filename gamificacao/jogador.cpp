@@ -10,6 +10,7 @@ uint8_t Jogador::obterPontuacao() {
 
 
 Botao Jogador::obterResposta() {
+  Serial.println(this->resposta_);
   return this->resposta_;
 }
 

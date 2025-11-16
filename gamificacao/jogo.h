@@ -8,7 +8,7 @@ class Jogo {
 public:
   Botao resposta_certa;
   bool ativo;
-  Jogador jogador[MAX_JOGADORES];
+  Jogador jogador[NUM_JOGADORES];
   Professor professor;
   EstadoJogo estado_atual;
   bool todos_jogadores_responderam;
@@ -21,6 +21,16 @@ public:
     : resposta_certa(BOTAO_INVALIDO), ativo(false), estado_atual(LCD_MENU_INICIAL), todos_jogadores_responderam(false),tempo_esgotado(false){
   }
   void iniciar_jogo();
+  void iniciarLCDS();
+  void verificarBotoesJogadores();
+  void iniciarPcfs();
+  void lcdRespondam();
+  void lcdEsperem();
+  void lcdAguardarJogadores();
+  void mostrarAcertos();
+  void verificarExistenciaResposta();
+  void lcdDefinirResposta();
+  void lcdPlacarFinal();
   void finalizarJogo();
   Botao definir_resposta_certa(Botao);
   void verificar_botoes_jogadores();

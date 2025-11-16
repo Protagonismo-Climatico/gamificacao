@@ -4,20 +4,20 @@
 #include "TCA9548.h"
 
 
-#define MAX_JOGADORES 6
+#define NUM_JOGADORES 6
 #define DEBOUNCE  50
 #define TEMPO_LIMITE  10000
 
 
 enum EnderecosI2C
 {
-    PLAYER_A = 0x20,
-    PLAYER_B = 0x20,
-    PLAYER_C = 0x20,
-    PLAYER_D = 0x20,
-    PLAYER_E = 0x20,
-    PLAYER_F = 0x20,
-    PROFESSOR = 0x20
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20,
+    PARTICIPANTE = 0x20
 };
 
 enum Botao
@@ -95,7 +95,7 @@ public:
 };
 
 
-class Professor {
+class PARTICIPANTE {
 
 private:
   uint8_t endereco_;
@@ -103,9 +103,9 @@ private:
 
 public:
 
-  Professor(char nome, uint8_t endereco)
+  PARTICIPANTE(char nome, uint8_t endereco)
     : nome_(nome), endereco_(endereco) {}
-  Professor()
+  PARTICIPANTE()
     : nome_('P'), endereco_(0) {}
 
 
@@ -118,8 +118,8 @@ class Jogo {
 public:
   Botao resposta_certa;
   bool ativo;
-  Jogador jogador[MAX_JOGADORES];
-  Professor professor;
+  Jogador jogador[NUM_JOGADORES];
+  PARTICIPANTE PARTICIPANTE;
   EstadoJogo estado_atual;
   bool todos_jogadores_responderam;
   bool tempo_esgotado;
@@ -200,20 +200,20 @@ Botao Jogo::definir_resposta_certa(Botao resposta) {
 
 
 void Jogo::redefinir_respostas_jogadores() {
-  for (int i = 0; i < MAX_JOGADORES; i++) {
+  for (int i = 0; i < NUM_JOGADORES; i++) {
     this->jogador[i].definirResposta(BOTAO_INVALIDO);
   }
 }
 
 void Jogo::reiniciar_jogadores() {
-  for (int i = 0; i < MAX_JOGADORES; i++) {
+  for (int i = 0; i < NUM_JOGADORES; i++) {
     jogador[i].reiniciar_jogador();
   }
 }
 
 void Jogo::verificar_botoes_jogadores() {
     this->todos_jogadores_responderam = true;
-    for (int i = 0; i < MAX_JOGADORES; i++) {
+    for (int i = 0; i < NUM_JOGADORES; i++) {
         if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
             jogador[i].verificarBotaoPressionado();
             if (jogador[i].obterResposta() == BOTAO_INVALIDO) {
@@ -224,7 +224,7 @@ void Jogo::verificar_botoes_jogadores() {
 }
 
 void Jogo::pontuar_jogadores(Botao resposta, uint8_t pontos) {
-  for (uint8_t i = 0; i < MAX_JOGADORES; i++) {
+  for (uint8_t i = 0; i < NUM_JOGADORES; i++) {
     if (this->jogador[i].obterResposta() == resposta) {
       this->jogador[i].marcar_ponto(pontos);
     }
@@ -240,14 +240,14 @@ void Jogo::finalizarJogo() {
   Serial.print("Acabou o jogo!");
   this->ativo = false;
 }
-uint8_t Professor::obterEndereco(){
+uint8_t PARTICIPANTE::obterEndereco(){
     return this->endereco_;
 }
-char Professor::obterNome(){
+char PARTICIPANTE::obterNome(){
     return this->nome_;
 }
 
-Botao Professor::verificarBotaoPressionado() {
+Botao PARTICIPANTE::verificarBotaoPressionado() {
     uint8_t botao_pressionado = Util::lerBotao(this->obterEndereco(), 1, MASCARA_BOTOES);
     
     switch (botao_pressionado) {
@@ -320,13 +320,13 @@ void setup() {
   }
 
   
-  jogo.professor = Professor('P', PROFESSOR);
-  jogo.jogador[0] = Jogador('A', PLAYER_A);
-  jogo.jogador[1] = Jogador('B', PLAYER_B);
-  jogo.jogador[2] = Jogador('C', PLAYER_C);
-  jogo.jogador[3] = Jogador('D', PLAYER_D);
-  jogo.jogador[4] = Jogador('E', PLAYER_E);
-  jogo.jogador[5] = Jogador('F', PLAYER_F);
+  jogo.PARTICIPANTE = PARTICIPANTE('P', PARTICIPANTE);
+  jogo.jogador[0] = Jogador('A', PARTICIPANTE);
+  jogo.jogador[1] = Jogador('B', PARTICIPANTE);
+  jogo.jogador[2] = Jogador('C', PARTICIPANTE);
+  jogo.jogador[3] = Jogador('D', PARTICIPANTE);
+  jogo.jogador[4] = Jogador('E', PARTICIPANTE);
+  jogo.jogador[5] = Jogador('F', PARTICIPANTE);
   
   MP.selectChannel(0);
   jogo.reiniciar_jogadores();
@@ -336,7 +336,7 @@ void setup() {
 
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Professor !");
+  lcd.print("PARTICIPANTE !");
 
   MP.selectChannel(1);
     lcd.init();      
@@ -353,7 +353,7 @@ void setup() {
 }
 
 void loop() {
-   botaoPressionado = jogo.professor.verificarBotaoPressionado();
+   botaoPressionado = jogo.PARTICIPANTE.verificarBotaoPressionado();
    Serial.println(botaoPressionado);
 
   if (millis() - t_ultima_mudanca > DEBOUNCE) {

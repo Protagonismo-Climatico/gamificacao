@@ -4,22 +4,24 @@
 
 #include <Wire.h>
 #include <Arduino.h>
-#define MAX_JOGADORES 1
+#include <LiquidCrystal_I2C.h>
+#include "TCA9548.h"
+
 #define DEBOUNCE  50
 #define TEMPO_LIMITE  10000
 #define MAX_ROUNDS 2
+#define NUM_CONTROLES 3
+#define NUM_JOGADORES (NUM_CONTROLES - 1)
 
+
+extern LiquidCrystal_I2C lcd;
+extern TCA9548 MP;
 
 
 enum EnderecosI2C
 {
-    PLAYER_A = 0x20,
-    PLAYER_B = 0x20,
-    PLAYER_C = 0x20,
-    PLAYER_D = 0x20,
-    PLAYER_E = 0x20,
-    PLAYER_F = 0x20,
-    PROFESSOR = 0x20
+    PARTICIPANTE = 0x20,
+    LCD = 0x27
 };
 
 enum Botao
