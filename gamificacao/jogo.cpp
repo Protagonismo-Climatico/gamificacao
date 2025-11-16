@@ -96,9 +96,11 @@ void Jogo::verificarExistenciaResposta() {
       lcd.print("A");
       }else if(resposta == BOTAO_B){
         lcd.print("B");
+      }else if(resposta == BOTAO_C){
+        lcd.print("C");
+      }else if(resposta == BOTAO_D){
+        lcd.print("D");
       }
-
-
     }
   }
   MP.selectChannel(0);
@@ -175,34 +177,31 @@ void Jogo::lcdPlacarFinal(){
       index_jogador++;
     }
   }
+  MP.selectChannel(0);
+
 }
 
 
 void Jogo::mostrarAcertos(){
-  for (int canal = 0; canal < NUM_CONTROLES; canal++) {
-    int i = this->jogador_atual_resultado;
+
+  for (uint8_t i = 0; i < NUM_JOGADORES; i++){
     bool acertou = (this->jogador[i].obterResposta() == this->resposta_certa);
-    MP.selectChannel(canal);
-    lcd.clear();
-
-    lcd.setCursor(0, 0);
-    lcd.print("Jogador ");
-
-    lcd.print(this->jogador[i].obterNome());
-
-    lcd.setCursor(0, 1);
-
-    if (acertou) {
-      lcd.print("Acertou! ");
-    } else {
-
-      lcd.print("Errou!   ");
+    for (int canal = 0; canal < NUM_CONTROLES; canal++) {
+      MP.selectChannel(canal);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Jogador ");
+      lcd.print(this->jogador[i].obterNome());
+      lcd.setCursor(0, 1);
+      if (acertou) {
+        lcd.print("Acertou! ");
+      } else {
+        lcd.print("Errou!   ");
+      }
+      lcd.print("Pts:");
+      lcd.print(this->jogador[i].obterPontuacao());
+      delay(1000);
+      }
     }
-    lcd.print("Pts:");
-    lcd.print(this->jogador[i].obterPontuacao());
-  }
   MP.selectChannel(0);
-  delay(2000);
-
 }
-

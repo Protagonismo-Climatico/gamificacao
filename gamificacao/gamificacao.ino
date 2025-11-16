@@ -8,8 +8,6 @@ TCA9548 MP(0x70);
 Jogo jogo;
 unsigned long t_ultima_mudanca = 0;    
 unsigned long t_inicio_resposta = 0;
-unsigned long t_mostra_resultado = 0;
-unsigned long t_placar_final = 0;
 
 
 Botao botaoPressionado = BOTAO_INVALIDO;
@@ -60,8 +58,9 @@ void loop() {
           botaoAnterior = BOTAO_A;
           jogo.estado_atual = LCD_DEF_RESPOSTA;
         }else if (botaoPressionado == BOTAO_B) {
+          botaoAnterior = BOTAO_B;
           Serial.println("Finalizar jogo pressionado.");
-          jogo.estado_atual = ACAO_ENCERRAR_JOGO;
+          jogo.estado_atual = LCD_PLACAR_FINAL;
         }
       break;
 
@@ -107,57 +106,34 @@ void loop() {
             jogo.jogador_atual_resultado = 0;
             jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
             t_inicio_resposta = 0;
-            t_mostra_resultado = 0;
             jogo.tempo_esgotado = false;
         }
         break;
 
         case LCD_MOSTRAR_RESULTADOS:
-          if (t_mostra_resultado == 0) {
-              t_mostra_resultado = millis();
-              jogo.mostrarAcertos();
-          }
-          
+          jogo.mostrarAcertos();
           jogo.estado_atual = ACAO_MOSTRAR_RESULTADOS;
           break;
         case ACAO_MOSTRAR_RESULTADOS:
-          jogo.jogador_atual_resultado++;
-          
-          if (jogo.jogador_atual_resultado >= NUM_JOGADORES) {
-            if (jogo.round_atual >= MAX_ROUNDS) {
-              jogo.estado_atual = LCD_PLACAR_FINAL;
-            } else {
-              jogo.round_atual++;
-              jogo.estado_atual = LCD_DEF_RESPOSTA;
-            }
-          } else {
-              t_mostra_resultado = 0;
-              jogo.estado_atual = LCD_MOSTRAR_RESULTADOS;
-          }
+          jogo.estado_atual = LCD_MENU_INICIAL;
           break;
-          case LCD_PLACAR_FINAL:
-            jogo.lcdPlacarFinal();
-                
-            t_placar_final = millis();
-            jogo.estado_atual = ACAO_PLACAR_FINAL;
-            break;
-          case ACAO_PLACAR_FINAL:
-            if (millis() - t_placar_final >= 10000) {
+        case LCD_PLACAR_FINAL:
+          jogo.lcdPlacarFinal();
+          jogo.estado_atual = ACAO_PLACAR_FINAL;
+          break;
+        case ACAO_PLACAR_FINAL:
+          if (botaoPressionado != botaoAnterior) {
+            botaoAnterior = botaoPressionado;
+            if(botaoPressionado != BOTAO_INVALIDO){
               jogo.estado_atual = ACAO_ENCERRAR_JOGO;
-              }
-            break;
-          case ACAO_ENCERRAR_JOGO:
-            for (int canal = 1; canal <= NUM_CONTROLES; canal++) {
-              MP.selectChannel(canal);
-              jogo.lcdEsperem();
             }
-            delay(2000);
-            jogo.round_atual = 0;
-            jogo.reiniciar_jogadores();
-            jogo.estado_atual = LCD_MENU_INICIAL;
-            break;
-            
-     
+         }
+         break;
+           
+        case ACAO_ENCERRAR_JOGO:
+          jogo.reiniciar_jogadores();
+          jogo.estado_atual = LCD_MENU_INICIAL;
+          break;
     }
   }
 }

@@ -9,7 +9,6 @@
 
 #define DEBOUNCE  50
 #define TEMPO_LIMITE  10000
-#define MAX_ROUNDS 2
 #define NUM_CONTROLES 3
 #define NUM_JOGADORES (NUM_CONTROLES - 1)
 
